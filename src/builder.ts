@@ -38,7 +38,7 @@ namespace cfg {
 		return conds
 	}
 
-	const getLayerConditions = (layer: Layer): string[] => {
+	const getLayConds = (layer: Layer): string[] => {
 		const layVnms: string[] = []
 		let current: Layer | undefined = layer
 		while (current) {
@@ -55,7 +55,7 @@ namespace cfg {
 				const dsts = Array.isArray(mapk.key) ? mapk.key : [mapk.key]
 				for (const dst of dsts) {
 					const toEvent = fmtDest(dst, mapk.mods)
-					const layVnms = map.layer ? getLayerConditions(map.layer) : []
+					const layVnms = map.layer ? getLayConds(map.layer) : []
 					const conds = mkConds(baseVnm, layVnms, excLays)
 					mrs.push(mkMr(map.desc, map.key, map.mods, toEvent, conds.length > 0 ? conds : undefined))
 				}
@@ -121,112 +121,124 @@ namespace cfg {
 	const procLayerMr = (lay: Layer): IManipulator[] => {
 		const mrs: IManipulator[] = []
 
-		const parentConditions = lay.parent ? getLayerConditions(lay.parent) : []
-		const parentConds = mkConds(lay.baseVar, parentConditions)
+		const parentConds = lay.parent ? getLayConds(lay.parent) : []
+		const conds = mkConds(lay.baseVar, parentConds)
 
 		mrs.push({
 			description: `Toggle layer ${lay.key}`,
 			type: 'basic',
-			from: {
-				key_code: lay.key,
-				modifiers: { optional: [Mod.any] }
-			},
+			from: { key_code: lay.key, modifiers: { optional: [Mod.any] } },
 			to: [{ set_variable: { name: lay.vName, value: 1 } }],
 			to_after_key_up: [{ set_variable: { name: lay.vName, value: 0 } }],
-			conditions: parentConds
+			conditions: conds
 		})
 
-		const layerKeyMaps = lay.maps.filter(m => !m.separated).map(m => ({
+		const layKeyMaps = lay.maps.filter(m => !m.separated).map(m => ({
 			key: m.key,
 			mods: m.mods,
 			keys: m.keys,
 			desc: m.dscFul,
 			layer: lay
 		}))
-		const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
-		const currentLayerConds = getLayerConditions(lay)
-		const excludeLayers = allLayers.filter(ln => !currentLayerConds.includes(ln))
-		mrs.push(...procKeyMaps(layerKeyMaps, lay.baseVar, excludeLayers))
+		const lays = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+		const layConsNow = getLayConds(lay)
+		const exclLays = lays.filter(ln => !layConsNow.includes(ln))
+		mrs.push(...procKeyMaps(layKeyMaps, lay.baseVar, exclLays))
 
 		return mrs
 	}
 
 	const proSepMaps = (maps: BasedKeyMap[], vnm: string): IKaraRule[] => {
-		const rules: IKaraRule[] = []
+		const rus: IKaraRule[] = []
 		for (const map of maps.filter(m => m.separated)) {
-			for (const mapping of map.keys) {
-				const dsts = Array.isArray(mapping.key) ? mapping.key : [mapping.key]
+			for (const mk of map.keys) {
+				const dsts = Array.isArray(mk.key) ? mk.key : [mk.key]
 				for (const dst of dsts) {
-					const conditions = [{ type: 'variable_if', name: vnm, value: 1 }]
-					const toEvent = fmtDest(dst, mapping.mods)
-					const manipulator = mkMr(map.dscFull, map.key, map.mods, toEvent, conditions)
-					rules.push({ description: map.dscFull, manipulators: [manipulator] })
+					const conds = [{ type: 'variable_if', name: vnm, value: 1 }]
+					const toE = fmtDest(dst, mk.mods)
+					const mr = mkMr(map.dscFull, map.key, map.mods, toE, conds)
+					rus.push({ description: map.dscFull, manipulators: [mr] })
 				}
 			}
 		}
-		return rules
+		return rus
 	}
 
 	const procSepLayers = (lays: Layer[]): IKaraRule[] => {
-		const rules: IKaraRule[] = []
-		for (const layer of lays.filter(l => l.separated)) {
+		const rus: IKaraRule[] = []
+		for (const lay of lays.filter(l => l.separated)) {
 			const mrs: IManipulator[] = []
 
-			const parentConditions = layer.parent ? getLayerConditions(layer.parent) : []
-			const parentConds = mkConds(layer.baseVar, parentConditions)
+			const parentConds = lay.parent ? getLayConds(lay.parent) : []
+			const conds = mkConds(lay.baseVar, parentConds)
 
 			mrs.push({
-				description: `Toggle layer ${layer.key}`,
+				description: `Toggle layer ${lay.key}`,
 				type: 'basic',
 				from: {
-					key_code: layer.key,
+					key_code: lay.key,
 					modifiers: { optional: [Mod.any] }
 				},
-				to: [{ set_variable: { name: layer.vName, value: 1 } }],
-				to_after_key_up: [{ set_variable: { name: layer.vName, value: 0 } }],
-				conditions: parentConds
+				to: [{ set_variable: { name: lay.vName, value: 1 } }],
+				to_after_key_up: [{ set_variable: { name: lay.vName, value: 0 } }],
+				conditions: conds
 			})
 
-			const nonSepMaps = layer.maps.filter(m => !m.separated)
+			const nonSepMaps = lay.maps.filter(m => !m.separated)
 			for (const map of nonSepMaps) {
-				const layKeyMaps = [{ key: map.key, mods: map.mods, keys: map.keys, desc: map.dscFul, layer: layer }]
-				const allLayers = layer.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
-				const currentLayerConds = getLayerConditions(layer)
+				const layKeyMaps = [{ key: map.key, mods: map.mods, keys: map.keys, desc: map.dscFul, layer: lay }]
+				const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+				const currentLayerConds = getLayConds(lay)
 				const excludeLayers = allLayers.filter(ln => !currentLayerConds.includes(ln))
-				mrs.push(...procKeyMaps(layKeyMaps, layer.baseVar, excludeLayers))
+				mrs.push(...procKeyMaps(layKeyMaps, lay.baseVar, excludeLayers))
 			}
 
-			let desc = layer.dscFul
+			let desc = lay.dscFul
 			if (nonSepMaps.length > 0) {
 				desc += ` ( ${nonSepMaps.length} )\n`
 				for (const km of nonSepMaps) {
-					const shortDesc = km.dscFul.replace(layer.dscFul + ' - ', '')
+					const shortDesc = km.dscFul.replace(lay.dscFul + ' - ', '')
 					desc += ` + [ ${icon(km.key)} ] : ${shortDesc}\n`
 				}
 				desc = desc.trimEnd()
 			}
 
-			rules.push({ description: desc, manipulators: mrs })
+			rus.push({ description: desc, manipulators: mrs })
 
-			for (const map of layer.maps.filter(m => m.separated)) {
-				for (const mapping of map.keys) {
-					const dsts = Array.isArray(mapping.key) ? mapping.key : [mapping.key]
+			for (const map of lay.maps.filter(m => m.separated)) {
+				for (const mk of map.keys) {
+					const dsts = Array.isArray(mk.key) ? mk.key : [mk.key]
 					for (const dst of dsts) {
-						const layerConds = getLayerConditions(layer)
-						const allLayers = layer.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+						const layerConds = getLayConds(lay)
+						const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
 						const excludeLayers = allLayers.filter(ln => !layerConds.includes(ln))
 						const conds = mkConds(undefined, layerConds, excludeLayers)
-						const toEvent = fmtDest(dst, mapping.mods)
+						const toEvent = fmtDest(dst, mk.mods)
 						const mr = mkMr(map.dscFul, map.key, map.mods, toEvent, conds)
-						rules.push({ description: map.dscFul, manipulators: [mr] })
+						rus.push({ description: map.dscFul, manipulators: [mr] })
 					}
 				}
 			}
 		}
-		return rules
+		return rus
 	}
 
 	export function toConfig(bu: Config) {
+
+		for (const rub of bu.ruleBsds) {
+			const mks = new Set(rub.maps.map(m => m.key))
+			const layKeys = new Set(rub.layers.map(l => l.key))
+
+			for (const key of mks) {
+				if (layKeys.has(key)) throw new Error(`Key conflict in rule "${rub.dscFul}": key "${key}" cannot be both mapped and used as layer trigger`)
+			}
+
+			for (const layer of rub.layers) {
+				for (const layerMap of layer.maps) {
+					if (layerMap.key === layer.key) throw new Error(`Invalid mapping in layer "${layer.dscFul}": cannot map key "${layer.key}" within the same layer that is triggered by this key`)
+				}
+			}
+		}
 
 		const rus: IKaraRule[] = []
 
