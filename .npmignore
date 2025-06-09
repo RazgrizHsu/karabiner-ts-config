@@ -1,0 +1,6 @@
+doc/
+example/
+src/
+tsconfig.json
+.editorconfig
+package-lock.json

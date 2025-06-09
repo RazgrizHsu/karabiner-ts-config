@@ -1,0 +1,4 @@
+dist/
+node_modules/
+automatic_backups
+*.json

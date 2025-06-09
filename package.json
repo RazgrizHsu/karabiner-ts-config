@@ -1,0 +1,45 @@
+{
+  "name": "karabiner-ts-config",
+  "version": "0.1.0",
+  "description": "TypeScript Builder for Karabiner Elements configuration",
+  "author": {
+    "name": "RazgrizHsu",
+    "email": "dev@raz.tw"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "karabiner-ts-config": "./dist/bin/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "example": "npx karabiner-ts-config ./example/raz.ts > karabiner.json",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.8.3"
+  },
+  "keywords": [
+    "karabiner",
+    "keyboard",
+    "config",
+    "typescript",
+    "builder"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RazgrizHsu/karabiner-ts-config.git"
+  }
+}
