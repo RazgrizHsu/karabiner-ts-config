@@ -5,19 +5,32 @@ import { existsSync, writeFileSync, mkdirSync } from 'fs'
 import { homedir } from 'os'
 import { createInterface } from 'readline'
 
-const cfgPath = process.argv[2]
-const outPath = process.argv[3]
+let argPathCfg: string | undefined = undefined
+let argPathOut: string | undefined = undefined
+let modeY: boolean = false
 
-if (!cfgPath) {
+for (let i = 2; i < process.argv.length; i++) {
+	const arg = process.argv[i]
+
+	if (arg === '-y' || arg === 'y' || arg === 'true') modeY = true
+	else {
+		if (!argPathCfg) argPathCfg = arg
+		else if (!argPathOut) argPathOut = arg
+		else console.warn(`Warning: Unrecognized argument: ${arg}. Ignoring.`)
+	}
+}
+
+if (!argPathCfg) {
 	console.error('Usage: karabiner-ts-config <config-file> [output-file]')
 	console.error('Example: karabiner-ts-config my-config.ts ~/.config/karabiner/karabiner.json')
 	console.error('Example: karabiner-ts-config my-config.ts (outputs to ~/.config/karabiner/karabiner.json)')
 	process.exit(1)
 }
 
-const path = resolve(cfgPath)
-const defaultKarabinerPath = resolve(homedir(), '.config', 'karabiner', 'karabiner.json')
-const outputPath = outPath ? resolve(outPath) : defaultKarabinerPath
+const pathKaraJson = resolve(homedir(), '.config', 'karabiner', 'karabiner.json')
+
+const path = resolve(argPathCfg)
+const pathTo = argPathOut ? resolve(argPathOut) : pathKaraJson
 
 if (!existsSync(path)) {
 	console.error(`Error: File not found ${path}`)
@@ -43,60 +56,54 @@ async function main() {
 		const uMod = require(path)
 
 		let rst
-		if (typeof uMod.default === 'function') rst = uMod.default()
-		else if (typeof uMod === 'function') rst = uMod()
+		if (typeof uMod.default == 'function') rst = uMod.default()
+		else if (typeof uMod == 'function') rst = uMod()
 		else {
 			console.error('Error: Configuration file must export a function that returns the config')
 			console.error('Example: export default () => config')
 			process.exit(1)
 		}
 
-		let cfg
-		if (rst && typeof rst.toJSON === 'function') cfg = rst.toJSON()
-		else if (typeof rst === 'string') {
-			try { cfg = JSON.parse(rst) }
+		let obj
+		if (rst && typeof rst.toJSON == 'function') obj = rst.toJSON()
+		else if (typeof rst == 'string') {
+			try { obj = JSON.parse(rst) }
 			catch (parseErr) {
 				console.error('Error: Returned string is not valid JSON')
 				console.error('Details:', parseErr instanceof Error ? parseErr.message : String(parseErr))
 				process.exit(1)
 			}
 		}
-		else if (rst && typeof rst === 'object') cfg = rst
+		else if (rst && typeof rst == 'object') obj = rst
 		else {
 			console.error('Error: Configuration function must return a Config object, config object, or JSON string')
 			process.exit(1)
 		}
 
-		if (!cfg || typeof cfg !== 'object') {
+		if (!obj || typeof obj !== 'object') {
 			console.error('Error: Invalid configuration object')
 			process.exit(1)
 		}
 
-		// Basic Karabiner format validation
-		if (!cfg.profiles || !Array.isArray(cfg.profiles)) throw new Error('Missing or invalid "profiles" array')
+		if (!obj.profiles || !Array.isArray(obj.profiles)) throw new Error('Missing or invalid "profiles" array')
+		if (obj.profiles.length == 0) throw new Error('At least one profile is required')
 
-		if (cfg.profiles.length === 0) throw new Error('At least one profile is required')
+		const pf = obj.profiles[0]
+		if (!pf.name) throw new Error('Profile must have a "name" field')
 
-		// Check if first profile has required structure
-		const firstProfile = cfg.profiles[0]
-		if (!firstProfile.name) throw new Error('Profile must have a "name" field')
-
-		// Check if output file exists and ask for confirmation
-		if (existsSync(outputPath)) {
-			const shouldOverwrite = await askUserConfirmation(`⚠️  File ${outputPath} already exists. Overwrite? (y/N): `)
-			if (!shouldOverwrite) {
+		if (existsSync(pathTo) && !modeY) {
+			const ans = await askUserConfirmation(`⚠️  File ${pathTo} already exists. Overwrite? (y/N): `)
+			if (!ans) {
 				console.log('❌ Operation cancelled')
 				process.exit(0)
 			}
 		}
 
-		// Ensure output directory exists
-		const outputDir = dirname(outputPath)
-		if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true })
+		const outDir = dirname(pathTo)
+		if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true })
 
-		// Write configuration to file
-		writeFileSync(outputPath, JSON.stringify(cfg, null, 2))
-		console.log(`✅ Configuration written to ${outputPath}`)
+		writeFileSync(pathTo, rst.toString())
+		console.log(`✅ Configuration written to ${pathTo}`)
 
 	} catch (err) {
 		console.error('Error: Failed to generate configuration')

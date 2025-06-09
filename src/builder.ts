@@ -30,22 +30,33 @@ namespace cfg {
 		return evt
 	}
 
-	const mkConds = (baseVnm?: string, layVnm?: string, excLays: string[] = []) => {
+	const mkConds = (baseVnm?: string, layVnms: string[] = [], excLays: string[] = []) => {
 		const conds: any[] = []
 		if (baseVnm) conds.push({ type: 'variable_if', name: baseVnm, value: 1 })
-		if (layVnm) conds.push({ type: 'variable_if', name: layVnm, value: 1 })
+		layVnms.forEach(layVnm => conds.push({ type: 'variable_if', name: layVnm, value: 1 }))
 		excLays.forEach(layer => conds.push({ type: 'variable_if', name: layer, value: 0 }))
 		return conds
 	}
 
-	const procKeyMaps = (maps: Array<{ key: Key, mods: Mod[], keys: IKeys, desc: string }>, baseVnm?: string, layVnm?: string, excLays: string[] = []) => {
+	const getLayerConditions = (layer: Layer): string[] => {
+		const layVnms: string[] = []
+		let current: Layer | undefined = layer
+		while (current) {
+			layVnms.unshift(current.vName)
+			current = current.parent
+		}
+		return layVnms
+	}
+
+	const procKeyMaps = (maps: Array<{ key: Key, mods: Mod[], keys: IKeys, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
 		const mrs: IManipulator[] = []
 		for (const map of maps) {
 			for (const mapk of map.keys) {
 				const dsts = Array.isArray(mapk.key) ? mapk.key : [mapk.key]
 				for (const dst of dsts) {
 					const toEvent = fmtDest(dst, mapk.mods)
-					const conds = mkConds(baseVnm, layVnm, excLays)
+					const layVnms = map.layer ? getLayerConditions(map.layer) : []
+					const conds = mkConds(baseVnm, layVnms, excLays)
 					mrs.push(mkMr(map.desc, map.key, map.mods, toEvent, conds.length > 0 ? conds : undefined))
 				}
 			}
@@ -55,7 +66,7 @@ namespace cfg {
 
 	const procTrigMrs = (ru: RuleBased): IManipulator[] => {
 		const mrs: IManipulator[] = []
-		const excludeLayers = ru.layers.map(sl => sl.vName)
+		const exclLays = ru.layers.map(sl => sl.vName)
 
 		if (ru.comboMode && ru.comboTarget) {
 			mrs.push({
@@ -68,7 +79,7 @@ namespace cfg {
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [{ key_code: Key.escape }],
-				...(excludeLayers.length > 0 && { conditions: mkConds(undefined, undefined, excludeLayers) })
+				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 
 			mrs.push({
@@ -87,7 +98,7 @@ namespace cfg {
 				],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [{ key_code: Key.escape }],
-				...(excludeLayers.length > 0 && { conditions: mkConds(undefined, undefined, excludeLayers) })
+				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 		} else {
 			mrs.push({
@@ -100,7 +111,7 @@ namespace cfg {
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [{ key_code: Key.escape }],
-				...(excludeLayers.length > 0 && { conditions: mkConds(undefined, undefined, excludeLayers) })
+				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 		}
 
@@ -109,6 +120,9 @@ namespace cfg {
 
 	const procLayerMr = (lay: Layer): IManipulator[] => {
 		const mrs: IManipulator[] = []
+
+		const parentConditions = lay.parent ? getLayerConditions(lay.parent) : []
+		const parentConds = mkConds(lay.baseVar, parentConditions)
 
 		mrs.push({
 			description: `Toggle layer ${lay.key}`,
@@ -119,16 +133,20 @@ namespace cfg {
 			},
 			to: [{ set_variable: { name: lay.vName, value: 1 } }],
 			to_after_key_up: [{ set_variable: { name: lay.vName, value: 0 } }],
-			conditions: [{ type: 'variable_if', name: lay.baseVar, value: 1 }]
+			conditions: parentConds
 		})
 
 		const layerKeyMaps = lay.maps.filter(m => !m.separated).map(m => ({
 			key: m.key,
 			mods: m.mods,
 			keys: m.keys,
-			desc: m.dscFul
+			desc: m.dscFul,
+			layer: lay
 		}))
-		mrs.push(...procKeyMaps(layerKeyMaps, undefined, lay.vName))
+		const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+		const currentLayerConds = getLayerConditions(lay)
+		const excludeLayers = allLayers.filter(ln => !currentLayerConds.includes(ln))
+		mrs.push(...procKeyMaps(layerKeyMaps, lay.baseVar, excludeLayers))
 
 		return mrs
 	}
@@ -154,6 +172,9 @@ namespace cfg {
 		for (const layer of lays.filter(l => l.separated)) {
 			const mrs: IManipulator[] = []
 
+			const parentConditions = layer.parent ? getLayerConditions(layer.parent) : []
+			const parentConds = mkConds(layer.baseVar, parentConditions)
+
 			mrs.push({
 				description: `Toggle layer ${layer.key}`,
 				type: 'basic',
@@ -163,13 +184,16 @@ namespace cfg {
 				},
 				to: [{ set_variable: { name: layer.vName, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: layer.vName, value: 0 } }],
-				conditions: [{ type: 'variable_if', name: layer.baseVar, value: 1 }]
+				conditions: parentConds
 			})
 
 			const nonSepMaps = layer.maps.filter(m => !m.separated)
 			for (const map of nonSepMaps) {
-				const layKeyMaps = [{ key: map.key, mods: map.mods, keys: map.keys, desc: map.dscFul }]
-				mrs.push(...procKeyMaps(layKeyMaps, undefined, layer.vName))
+				const layKeyMaps = [{ key: map.key, mods: map.mods, keys: map.keys, desc: map.dscFul, layer: layer }]
+				const allLayers = layer.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+				const currentLayerConds = getLayerConditions(layer)
+				const excludeLayers = allLayers.filter(ln => !currentLayerConds.includes(ln))
+				mrs.push(...procKeyMaps(layKeyMaps, layer.baseVar, excludeLayers))
 			}
 
 			let desc = layer.dscFul
@@ -188,7 +212,10 @@ namespace cfg {
 				for (const mapping of map.keys) {
 					const dsts = Array.isArray(mapping.key) ? mapping.key : [mapping.key]
 					for (const dst of dsts) {
-						const conds = [{ type: 'variable_if', name: layer.vName, value: 1 }]
+						const layerConds = getLayerConditions(layer)
+						const allLayers = layer.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
+						const excludeLayers = allLayers.filter(ln => !layerConds.includes(ln))
+						const conds = mkConds(undefined, layerConds, excludeLayers)
 						const toEvent = fmtDest(dst, mapping.mods)
 						const mr = mkMr(map.dscFul, map.key, map.mods, toEvent, conds)
 						rules.push({ description: map.dscFul, manipulators: [mr] })
@@ -264,7 +291,7 @@ namespace cfg {
 							const baseVar = cond.name
 							for (const oru of rus) {
 								for (const omr of oru.manipulators) {
-									if (omr.to && omr.to[0]?.set_variable?.name?.startsWith(`layer_${baseVar}_`)) {
+									if (omr.to && omr.to[0]?.set_variable?.name?.startsWith(`lay_${baseVar}_`)) {
 										const vnm = omr.to[0].set_variable.name
 										const excCond = mr.conditions.find(c => c.name === vnm)
 										if (!excCond) mr.conditions.push({ type: 'variable_if', name: vnm, value: 0 })
@@ -380,7 +407,7 @@ export class Config {
 abstract class IDesc {
 	dsc?: string
 
-	constructor( desc?: string ){
+	constructor(desc?: string) {
 		this.dsc = desc
 	}
 
@@ -389,16 +416,16 @@ abstract class IDesc {
 		return this
 	}
 
-	abstract get dscFul() : string;
+	abstract get dscFul(): string;
 
 }
 
 abstract class IRule extends IDesc {
 	bu: Config
 
-	constructor( bu:Config, desc?: string ){
+	constructor(bu: Config, desc?: string) {
 
-		super( desc )
+		super(desc)
 		this.bu = bu
 	}
 }
@@ -408,7 +435,7 @@ export class Rule extends IRule {
 	maps: RuleKeyMap[] = []
 
 	constructor(bu: Config, desc?: string) {
-		super( bu, desc )
+		super(bu, desc)
 	}
 
 	get dscFul() {
@@ -433,7 +460,7 @@ export class RuleBased extends IRule {
 	layers: Layer[] = []
 
 	constructor(bu: Config, k: Key, trigMods: Mod[]) {
-		super( bu )
+		super(bu)
 		this.baseKey = k
 		this.baseMods = trigMods
 		this.bu.chkDupKey(k, trigMods, [], 'ruleBaseBy')
@@ -471,18 +498,21 @@ export class Layer extends IDesc {
 	key: Key
 	mods: Mod[] = []
 	rule: RuleBased
+	parent?: Layer
 	separated: boolean = false
 	maps: LayerKeyMap[] = []
 
-	constructor(rule: RuleBased, key: Key) {
+	constructor(rule: RuleBased, key: Key, parent?: Layer) {
 		super()
 
 		this.key = key
 		this.rule = rule
+		this.parent = parent
 	}
 
 	get dscFul(): string {
-		return `${this.rule.dscFul} + [ ${this.key} ] ： ${this.dsc}`
+		const parentDesc = this.parent ? this.parent.dscFul : this.rule.dscFul
+		return `${parentDesc} + [ ${this.key} ] ： ${this.dsc}`
 	}
 
 	separate(): Layer {
@@ -491,11 +521,19 @@ export class Layer extends IDesc {
 	}
 
 	get vName(): string {
-		return `layer_${this.rule.baseVar}_${this.key}`
+		if (!this.parent) return `lay_${this.rule.baseVar}_${this.key}`
+		return `${this.parent.vName}_${this.key}`
 	}
 
 	get baseVar(): string {
 		return this.rule.baseVar
+	}
+
+
+	layer(key: Key): Layer {
+		const subLayer = new Layer(this.rule, key, this)
+		this.rule.layers.push(subLayer)
+		return subLayer
 	}
 
 	map(key: Key, mods: Mod[] = []): LayerKeyMap {
@@ -573,9 +611,6 @@ export class LayerKeyMap extends IMap {
 	constructor(layer: Layer, k: Key, mods: Mod[]) {
 		super(k, mods)
 		this.layer = layer
-		const ctxDesc = `${layer.rule.dsc || 'RuleBased'}.layer(${layer.key}).map(${k})`
-		const layerConds = [layer.rule.baseVar, layer.vName]
-		layer.rule.bu.chkDupKey(k, mods, layerConds, ctxDesc)
 	}
 
 	separate(): LayerKeyMap {
