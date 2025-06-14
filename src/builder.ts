@@ -68,7 +68,15 @@ namespace cfg {
 		const mrs: IManipulator[] = []
 		const exclLays = ru.layers.map(sl => sl.vName)
 
+
+		let onAlone = { key_code: Key.escape } as any
+		if ( ru.onAlone && ru.onAlone.key ) {
+			onAlone = { key_code: ru.onAlone.key }
+			if ( ru.onAlone.holdMs ) onAlone.hold_down_milliseconds = ru.onAlone.holdMs
+		}
+
 		if (ru.comboMode && ru.comboTarget) {
+
 			mrs.push({
 				description: `${ru.baseKey} -> Set ${ru.baseVar} variable`,
 				type: 'basic',
@@ -78,7 +86,7 @@ namespace cfg {
 				},
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
-				to_if_alone: [{ key_code: Key.escape }],
+				to_if_alone: [onAlone],
 				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 
@@ -97,7 +105,7 @@ namespace cfg {
 					}
 				],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
-				to_if_alone: [{ key_code: Key.escape }],
+				to_if_alone: [onAlone],
 				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 		} else {
@@ -110,7 +118,7 @@ namespace cfg {
 				},
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
-				to_if_alone: [{ key_code: Key.escape }],
+				to_if_alone: [onAlone],
 				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
 			})
 		}
@@ -471,6 +479,9 @@ export class RuleBased extends IRule {
 	comboTarget?: { key: Key | Mod, mods: Mod[] }
 	layers: Layer[] = []
 
+	//"to_if_alone": [{ "key_code": "caps_lock", "hold_down_milliseconds": 100 }]
+	onAlone: { key?:Key, holdMs?:number } = {}
+
 	constructor(bu: Config, k: Key, trigMods: Mod[]) {
 		super(bu)
 		this.baseKey = k
@@ -485,6 +496,11 @@ export class RuleBased extends IRule {
 
 	get dscFul() {
 		return this.dsc ? `${this.dsc}` : `RuleBased: ${this.baseKey}`
+	}
+
+	ifAlone(key:Key, holdMs=100) {
+		this.onAlone = { key, holdMs }
+		return this
 	}
 
 	map(key: Key, mods: Mod[] = []): BasedKeyMap {

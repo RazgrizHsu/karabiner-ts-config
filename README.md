@@ -147,6 +147,36 @@ const hyp2 = co.ruleBaseBy(k.caps_lock)
 const hyp3 = co.ruleBaseBy(k.caps_lock)
     .desc('Base Key')
     .mapTo(k.f18)
+
+// Configure fallback behavior for when the Base Key is pressed alone
+const hyp4 = co.ruleBaseBy(k.caps_lock)
+    .desc('Base Key with custom alone behavior')
+    .mapTo(mod.left_shift, [mod.left_control, mod.left_option, mod.left_command])
+    .ifAlone(k.caps_lock)  // When pressed alone, output caps_lock instead of escape
+```
+
+### Setting Fallback Behavior with `.ifAlone()`
+
+By default, when a Base Key is pressed and released without any other keys, it outputs the `escape` key. You can customize this behavior using the `.ifAlone()` method:
+
+```typescript
+// Example 1: When pressed alone, output the original key (caps_lock)
+const hyp = co.ruleBaseBy(k.caps_lock)
+    .desc('Base Key')
+    .mapTo(mod.left_shift, [mod.left_control, mod.left_option, mod.left_command])
+    .ifAlone(k.caps_lock)
+
+// Example 2: When pressed alone, output a different key (like F18)
+const hyp2 = co.ruleBaseBy(k.caps_lock)
+    .desc('Base Key')
+    .mapTo(mod.left_shift, [mod.left_control, mod.left_option, mod.left_command])
+    .ifAlone(k.f18)
+
+// Example 3: Without ifAlone(), pressing the key alone will output escape (default)
+const hyp3 = co.ruleBaseBy(k.caps_lock)
+    .desc('Base Key')
+    .mapTo(mod.left_shift, [mod.left_control, mod.left_option, mod.left_command])
+    // No ifAlone() - defaults to escape when pressed alone
 ```
 
 ## Using the Base Key: Direct Mappings
@@ -259,9 +289,9 @@ key rollover limitations vary between different keyboard models, so please test 
 ### config
 
 - `rule(description)` - create basic rule for simple mappings
-- `rulebaseby(key, modifiers?)` - create base key rule
-- `tojson()` - generate json karabiner configuration (object)
-- `tostring()` - generate formatted karabiner configuration
+- `ruleBaseBy(key, modifiers?)` - create base key rule
+- `toJson()` - generate json karabiner configuration (object)
+- `toString()` - generate formatted karabiner configuration
 
 ### rule (basic rules)
 
@@ -270,7 +300,8 @@ key rollover limitations vary between different keyboard models, so please test 
 
 ### rulebased (advanced rules)
 
-- `mapto(modifier, modifiers[]?)` - Set Base Key modifiers (optional)
+- `mapTo(modifier, modifiers[]?)` - Set Base Key modifiers (optional)
+- `ifAlone(key)` - Set fallback key when Base Key is pressed alone (optional, defaults to escape)
 - `map(key, modifiers?)` - Create key mapping (chainable)
 - `layer(key)` - Create layer
 - `.desc(description)` - Add description to rule
