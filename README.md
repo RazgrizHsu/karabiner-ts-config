@@ -120,6 +120,51 @@ fnNav.map(k.left_arrow, [mod.fn]).to(k.home).desc('Fn+Left to Home')
 fnNav.map(k.right_arrow, [mod.fn]).to(k.end).desc('Fn+Right to End')
 ```
 
+## Device Configuration
+
+Configure specific devices to apply different settings based on keyboard or mouse hardware:
+
+```typescript
+// Target specific device by vendor and product ID
+co.device({ vendor_id: 1452, product_id: 641 }) // Apple Magic Keyboard
+
+// Multiple device configurations
+co.device({ vendor_id: 1133, product_id: 49970 }) // Logitech device
+co.device({ vendor_id: 1452, product_id: 123 }, true) // Ignore this device
+```
+
+**Finding Device IDs:**
+1. Open Karabiner-Elements EventViewer
+2. Connect your device and press any key
+3. Note the vendor_id and product_id values
+
+**Parameters:**
+- `vendor_id`: Manufacturer identifier
+- `product_id`: Device model identifier  
+- `ignore` (optional): Set to `true` to ignore this device completely
+
+## Simple Key Mappings with Config.map()
+
+For basic one-to-one key remapping without complex logic, use `config.map()`. This creates simple modifications that are processed faster than complex rules:
+
+```typescript
+// Simple key replacements (uses Karabiner's simple_modifications)
+co.map(k.caps_lock).to(k.escape)
+co.map(k.right_command).to(k.f18)
+
+// With modifier keys
+co.map(k.f1, [mod.fn]).to(k.f1) // Override Fn+F1 behavior
+```
+
+**When to use Config.map() vs Rule.map():**
+- **Config.map()**: Basic key replacement, faster processing, limited functionality
+- **Rule.map()**: Complex mappings, shell commands, conditional logic, layers
+
+**Limitations of Config.map():**
+- Cannot execute shell commands
+- Cannot create layers or complex conditions
+- Only supports direct key-to-key mapping
+
 
 # Base Key System
 

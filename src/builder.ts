@@ -1,4 +1,4 @@
-import { IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator, IToEvent } from './types'
+import { IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator, IToEvent, ISimpleModification, IDevice, IDeviceIdentifiers } from './types'
 import { Key, Mouse, Mod } from './enums'
 import { icon } from './icon'
 
@@ -231,6 +231,31 @@ namespace cfg {
 		return rus
 	}
 
+	const procSimpleMods = (simpleMaps: SimpleKeyMap[]): ISimpleModification[] => {
+		const smods: ISimpleModification[] = []
+		for (const sm of simpleMaps) {
+			if (!sm.dst) continue
+
+			const from = {
+				key_code: sm.key,
+				...(sm.mods.length > 0 && { modifiers: { mandatory: sm.mods.map(m => m.toString()) } })
+			}
+
+			let to: { key_code: string; modifiers?: string[] }
+			if (typeof sm.dst === 'string' && !Object.values(Key).includes(sm.dst as Key)) {
+				continue
+			}
+
+			to = {
+				key_code: sm.dst as Key,
+				...(sm.dstMods?.length && { modifiers: sm.dstMods.map(m => m.toString()) })
+			}
+
+			smods.push({ from, to })
+		}
+		return smods
+	}
+
 	export function toConfig(bu: Config) {
 
 		for (const rub of bu.ruleBsds) {
@@ -324,10 +349,14 @@ namespace cfg {
 			}
 		}
 
+		const simpleMods = procSimpleMods(bu.simples)
+
 		return {
 			global: bu.global,
 			profiles: [{
 				name: bu.profName,
+				...(bu.devices.length > 0 && { devices: bu.devices }),
+				...(simpleMods.length > 0 && { simple_modifications: simpleMods }),
 				complex_modifications: { rules: rus },
 				virtual_hid_keyboard: { keyboard_type_v2: 'ansi' }
 			}]
@@ -373,6 +402,8 @@ export class Config {
 	profName: string
 	rules: Rule[] = []
 	ruleBsds: RuleBased[] = []
+	simples: SimpleKeyMap[] = []
+	devices: IDevice[] = []
 	keyMap = new Map<string, Set<string>>()
 
 	public global: IKaraCfgGlobal = { show_in_menu_bar: false }
@@ -387,6 +418,12 @@ export class Config {
 		return ruleBuilder
 	}
 
+	map(key: Key, mods: Mod[] = []): SimpleKeyMap {
+		const sm = new SimpleKeyMap(this, key, mods)
+		this.simples.push(sm)
+		return sm
+	}
+
 	ruleBaseBy(key: Key, mods: Mod[] = []): RuleBased {
 		const baseKeyId = `${key}+${mods.join(',')}`
 
@@ -396,6 +433,13 @@ export class Config {
 		const rule = new RuleBased(this, key, mods)
 		this.ruleBsds.push(rule)
 		return rule
+	}
+
+	device(idf: IDeviceIdentifiers, ignore = false): Config {
+		idf.is_keyboard=true
+		idf.is_pointing_device=true
+		this.devices.push({ identifiers: idf, ignore })
+		return this
 	}
 
 	chkDupKey(key: Key, mods: Mod[] = [], conds: string[] = [], ctxDesc?: string): void {
@@ -644,5 +688,31 @@ export class LayerKeyMap extends IMap {
 	separate(): LayerKeyMap {
 		this.separated = true
 		return this
+	}
+}
+
+export class SimpleKeyMap{
+	cfg: Config
+	key: Key
+	mods: Mod[]
+	dst?: IKey
+	dstMods?: Mod[]
+
+	constructor(cfg: Config, key: Key, mods: Mod[] = []) {
+		this.cfg = cfg
+		this.key = key
+		this.mods = mods
+		const ctxDesc = `Config.map(${key})`
+		cfg.chkDupKey(key, mods, [], ctxDesc)
+	}
+
+	to(dst: IKey, mods?: Mod[]): SimpleKeyMap {
+		this.dst = dst
+		this.dstMods = mods
+		return this
+	}
+
+	toOsaOpen(app: string, url: string): SimpleKeyMap {
+		return this.to(util.mkCmd_OsaOpen(app, url))
 	}
 }

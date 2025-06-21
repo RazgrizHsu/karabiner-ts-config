@@ -101,4 +101,22 @@ describe('Key Validation', () => {
       }).not.toThrow()
     })
   })
+
+  describe('Simple key mapping validation', () => {
+    test('should throw error when same simple key is mapped twice', () => {
+      expect(() => {
+        let co = new Config()
+        co.map(k.a).to(k.b)
+        co.map(k.a).to(k.c)
+      }).toThrow('Duplicate key combination: a in Config.map(a)')
+    })
+
+    test('should throw error when same simple key with mods is mapped twice', () => {
+      expect(() => {
+        let co = new Config()
+        co.map(k.a, [mod.cmd]).to(k.b)
+        co.map(k.a, [mod.cmd]).to(k.c)
+      }).toThrow('Duplicate key combination: a+cmd in Config.map(a)')
+    })
+  })
 })

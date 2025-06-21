@@ -3,6 +3,18 @@ export interface IKaraCfgGlobal {
     show_in_menu_bar: boolean
 }
 
+export interface IDeviceIdentifiers {
+  is_keyboard?: boolean
+  is_pointing_device?: boolean
+  product_id?: number
+  vendor_id?: number
+}
+
+export interface IDevice {
+  identifiers: IDeviceIdentifiers
+  ignore?: boolean
+}
+
 export interface IKaraCfg {
   global: IKaraCfgGlobal
   profiles: IProfile[]
@@ -10,6 +22,8 @@ export interface IKaraCfg {
 
 export interface IProfile {
   name: string
+  devices?: IDevice[]
+  simple_modifications?: ISimpleModification[]
   complex_modifications: {
     rules: IKaraRule[]
   }
@@ -56,4 +70,18 @@ export interface ICondition {
   type: 'variable_if'
   name: string
   value: number
+}
+
+export interface ISimpleModification {
+  from: {
+    key_code: string
+    modifiers?: {
+      mandatory?: string[]
+      optional?: string[]
+    }
+  }
+  to: {
+    key_code: string
+    modifiers?: string[]
+  }
 }

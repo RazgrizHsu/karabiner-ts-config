@@ -24,7 +24,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "example": "npx karabiner-ts-config ./example/raz.ts > karabiner.json",
+    "example": "npx karabiner-ts-config ./example/raz.ts ./test.json",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
