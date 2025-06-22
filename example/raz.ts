@@ -25,7 +25,7 @@ bse.map(k.h).to(k.left_arrow).desc('Left')
 bse.map(k.l).to(k.right_arrow).desc('Right')
 
 // App Open
-const la = bse.layer(k.a).desc('Window Management').separate()
+const la = bse.layer(k.a).desc('Application').separate()
 la.map(k.s).to(`open -a spotify`).desc('spotify').separate()
 la.map(k.o).to(`open -a Obsidian`).desc('Obsidian').separate()
 la.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2').separate()

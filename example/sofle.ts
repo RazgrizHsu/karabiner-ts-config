@@ -11,39 +11,44 @@ co.map(k.caps_lock).to(k.f16)
 
 
 // for fast
-co.map(k.right_command,[mod.left_command]).to(k.escape)
-co.map(k.spacebar,[mod.left_option]).to(k.escape)
-co.map(k.return_or_enter,[mod.left_option]).to(k.delete_forward)
-co.map(k.delete_or_backspace,[mod.left_shift]).to(k.delete_forward)
+co.map(k.grave_accent_and_tilde,[k.left_command]).to(k.escape)
+co.map(k.right_command,[k.left_command]).to(k.escape)
+co.map(k.spacebar,[k.left_option]).to(k.escape)
+co.map(k.delete_or_backspace,[k.left_shift]).to(k.delete_forward)
+co.map(k.return_or_enter,[k.left_option]).to(k.delete_forward)
+co.map(k.return_or_enter,[k.left_command]).to(k.delete_or_backspace)
+
 
 
 // 因為如果你用layer，它會阻檔其他的hold-cmd行為, 所以只能用直接對應的方式
 const lc = co.rule('Left Cmd')
-lc.map(k.return_or_enter,[mod.left_command]).to(k.delete_or_backspace).desc('fast bspc')
-lc.map(k.u, [mod.left_command]).to(k.hyphen).desc('-')
-lc.map(k.i, [mod.left_command]).to(k.equal_sign).desc('=')
-lc.map(k.u, [mod.left_command, mod.left_shift]).to(k.hyphen, [mod.left_shift]).desc('_')
-lc.map(k.i, [mod.left_command, mod.left_shift]).to(k.equal_sign, [mod.left_shift]).desc('+')
+lc.map(k.u, [k.left_command]).to(k.hyphen).desc('-')
+lc.map(k.i, [k.left_command]).to(k.equal_sign).desc('=')
+lc.map(k.u, [k.left_command, k.left_shift]).to(k.hyphen, [k.left_shift]).desc('_')
+lc.map(k.i, [k.left_command, k.left_shift]).to(k.equal_sign, [k.left_shift]).desc('+')
 
-lc.map(k.o, [mod.left_command]).to(k.open_bracket).desc('[')
-lc.map(k.p, [mod.left_command]).to(k.close_bracket).desc(']')
-lc.map(k.o, [mod.left_command, mod.left_shift]).to(k.open_bracket, [mod.left_shift]).desc('{')
-lc.map(k.p, [mod.left_command, mod.left_shift]).to(k.close_bracket, [mod.left_shift]).desc('}')
-lc.map(k.slash, [mod.left_command]).to(k.slash, [mod.left_shift]).desc('?')
-lc.map(k.semicolon, [mod.left_command]).to(k.semicolon, [mod.left_shift]).desc(':')
-lc.map(k.quote, [mod.left_command]).to(k.quote, [mod.left_shift]).desc('"')
-lc.map(k.backslash, [mod.left_command]).to(k.backslash, [mod.left_shift]).desc('|')
+lc.map(k.o, [k.left_command]).to(k.open_bracket).desc('[')
+lc.map(k.p, [k.left_command]).to(k.close_bracket).desc(']')
+lc.map(k.o, [k.left_command, k.left_shift]).to(k.open_bracket, [k.left_shift]).desc('{')
+lc.map(k.p, [k.left_command, k.left_shift]).to(k.close_bracket, [k.left_shift]).desc('}')
+lc.map(k.slash, [k.left_command]).to(k.slash, [k.left_shift]).desc('?')
+lc.map(k.semicolon, [k.left_command]).to(k.semicolon, [k.left_shift]).desc(':')
+lc.map(k.quote, [k.left_command]).to(k.quote, [k.left_shift]).desc('"')
+lc.map(k.backslash, [k.left_command]).to(k.backslash, [k.left_shift]).desc('|')
 
 
-lc.map(k.n9, [mod.left_command]).to(k.n9,[mod.left_shift]).desc('(')
-lc.map(k.n0, [mod.left_command]).to(k.n0,[mod.left_shift]).desc(')')
+lc.map(k.n9, [k.left_command]).to(k.n9,[k.left_shift]).desc('(')
+lc.map(k.n0, [k.left_command]).to(k.n0,[k.left_shift]).desc(')')
+
+// const lhr = co.rule('Left Home Rows')
+// lhr.map(k.z)
 
 //------------------------------------------------------------------------
 // hyper key
 //------------------------------------------------------------------------
 const bse = co.ruleBaseBy(k.f16)
-	.desc('🌟 Hyper')
-	.ifAlone(k.escape)
+.desc('🌟 Hyper')
+.ifAlone(k.escape)
 
 bse.map(k.f).to(`open -a 'Finder'`).desc('Finder').separate()
 bse.map(k.t).to(`open -a ghostty`).desc('ghostty').separate()
@@ -54,20 +59,19 @@ bse.map(k.k).to(k.up_arrow).desc('Up')
 bse.map(k.j).to(k.down_arrow).desc('Down')
 bse.map(k.h).to(k.left_arrow).desc('Left')
 bse.map(k.l).to(k.right_arrow).desc('Right')
-bse.map(k.g).to(k.home).desc('Home')
-bse.map(k.semicolon).to(k.end).desc('End')
-bse.map(k.u).to(k.page_up).desc('PageUp')
-bse.map(k.n).to(k.page_down).desc('PageDown')
-// hyper+LCmd=esc
-bse.map(k.spacebar).to(k.escape).desc('Esc')
 
+const la = bse.layer(k.a).desc('sim shift').separate()
+la.map(k.k).to(k.up_arrow,[k.left_shift])
+la.map(k.j).to(k.down_arrow,[k.left_shift])
+la.map(k.h).to(k.left_arrow,[k.left_shift])
+la.map(k.l).to(k.right_arrow,[k.left_shift])
 
 // App Open
-const la = bse.layer(k.a).desc('Window Management').separate()
-la.map(k.s).to(`open -a spotify`).desc('spotify').separate()
-la.map(k.o).to(`open -a Obsidian`).desc('Obsidian').separate()
-la.map(k.l).to(`open -a Line`).desc('Line').separate()
-la.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2').separate()
+const lo = bse.layer(k.o).desc('Open App').separate()
+lo.map(k.s).to(`open -a spotify`).desc('spotify').separate()
+lo.map(k.m).to(`open -a Obsidian`).desc('Obsidian').separate()
+lo.map(k.l).to(`open -a Line`).desc('Line').separate()
+lo.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2').separate()
 
 
 const lw = bse.layer(k.w).desc('Window Management').separate()
@@ -80,16 +84,16 @@ lw.map(k.spacebar).to(`open -g 'rectangle://execute-action?name=restore'`).desc(
 lw.map(k.return_or_enter).to(`open -g 'rectangle://execute-action?name=maximize'`).desc('Maximize')
 lw.map(k.y).to(`open -g 'rectangle://execute-action?name=top-left-sixth'`).desc('Top Left Six')
 lw.map(k.period).to(`open -g 'rectangle://execute-action?name=bottom-right-sixth'`).desc('Bottom Right Six')
-lw.map(k.hyphen).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
-lw.map(k.equal_sign).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
+lw.map(k.u).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
+lw.map(k.i).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 
 // macOS next window
-lw.map(k.n).to(k.grave_accent_and_tilde, [mod.left_control, mod.left_shift, mod.left_option, mod.left_command]).desc('Focus Next Window').separate()
+lw.map(k.n).to(k.grave_accent_and_tilde, [k.left_control, k.left_shift, k.left_option, k.left_command]).desc('Focus Next Window').separate()
 
 // sub layer for resize
 const lwr = lw.layer(k.r).desc('Window resize').separate()
-lwr.map(k.hyphen).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
-lwr.map(k.equal_sign).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
+lwr.map(k.i).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
+lwr.map(k.u).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 lwr.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc('Smaller Width')
 lwr.map(k.l).to(`open -g 'rectangle://execute-action?name=larger-width'`).desc('Larger Width')
 lwr.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller-height'`).desc('Smaller Height')

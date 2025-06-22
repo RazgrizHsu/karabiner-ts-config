@@ -3,7 +3,8 @@ import { Key, Mouse, Mod } from './enums'
 import { icon } from './icon'
 
 export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
-export type IKeys = Array<{ key: IKey, mods?: Mod[] }>
+export type IKeyDefine = Array<{ key: IKey, mods?: IMod[] }>
+export type IMod = Key | Mod
 
 namespace util {
 	export function mkCmd_OsaOpen(app: string, url: string): string {
@@ -13,7 +14,7 @@ namespace util {
 
 namespace cfg {
 
-	const mkMr = (desc: string, keyC: Key, mods: Mod[], toEvent: IToEvent, conds?: any[]) => ({
+	const mkMr = (desc: string, keyC: Key, mods: IMod[], toEvent: IToEvent, conds?: any[]) => ({
 		description: desc,
 		type: 'basic' as const,
 		from: { key_code: keyC, modifiers: mods.length > 0 ? { mandatory: mods.map(m => m.toString()) } : undefined },
@@ -21,7 +22,7 @@ namespace cfg {
 		...(conds && { conditions: conds })
 	})
 
-	const fmtDest = (dst: IKey, dstMods?: Mod[]): IToEvent => {
+	const fmtDest = (dst: IKey, dstMods?: IMod[]): IToEvent => {
 		if (dst === Mouse.left || dst === Mouse.right || dst === Mouse.middle) return { pointing_button: dst as Mouse }
 		if (typeof dst === 'string' && !Object.values(Key).includes(dst as Key)) return { shell_command: dst }
 
@@ -48,7 +49,7 @@ namespace cfg {
 		return layVnms
 	}
 
-	const procKeyMaps = (maps: Array<{ key: Key, mods: Mod[], keys: IKeys, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
+	const procKeyMaps = (maps: Array<{ key: Key, mods: IMod[], keys: IKeyDefine, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
 		const mrs: IManipulator[] = []
 		for (const map of maps) {
 			for (const mapk of map.keys) {
@@ -418,13 +419,13 @@ export class Config {
 		return ruleBuilder
 	}
 
-	map(key: Key, mods: Mod[] = []): SimpleKeyMap {
+	map(key: Key, mods: IMod[] = []): SimpleKeyMap {
 		const sm = new SimpleKeyMap(this, key, mods)
 		this.simples.push(sm)
 		return sm
 	}
 
-	ruleBaseBy(key: Key, mods: Mod[] = []): RuleBased {
+	ruleBaseBy(key: Key, mods: IMod[] = []): RuleBased {
 		const baseKeyId = `${key}+${mods.join(',')}`
 
 		for (const [_, ks] of this.keyMap) {
@@ -442,7 +443,7 @@ export class Config {
 		return this
 	}
 
-	chkDupKey(key: Key, mods: Mod[] = [], conds: string[] = [], ctxDesc?: string): void {
+	chkDupKey(key: Key, mods: IMod[] = [], conds: string[] = [], ctxDesc?: string): void {
 		const sk = `${key}+${mods.join(',')}`
 		const sc = conds.join(',')
 
@@ -506,7 +507,7 @@ export class Rule extends IRule {
 		return this.dsc || `Rule: Non-Desc, Maps[ ${this.maps.length} ]`
 	}
 
-	map(key: Key, mods: Mod[] = []): RuleKeyMap {
+	map(key: Key, mods: IMod[] = []): RuleKeyMap {
 		const mp = new RuleKeyMap(this, key, mods)
 		this.maps.push(mp)
 		return mp
@@ -518,15 +519,15 @@ export class RuleBased extends IRule {
 	maps: BasedKeyMap[] = []
 
 	baseKey: Key
-	baseMods: Mod[]
+	baseMods: IMod[]
 	comboMode: boolean = false
-	comboTarget?: { key: Key | Mod, mods: Mod[] }
+	comboTarget?: { key: Key | Mod, mods: IMod[] }
 	layers: Layer[] = []
 
 	//"to_if_alone": [{ "key_code": "caps_lock", "hold_down_milliseconds": 100 }]
 	onAlone: { key?:Key, holdMs?:number } = {}
 
-	constructor(bu: Config, k: Key, trigMods: Mod[]) {
+	constructor(bu: Config, k: Key, trigMods: IMod[]) {
 		super(bu)
 		this.baseKey = k
 		this.baseMods = trigMods
@@ -547,7 +548,7 @@ export class RuleBased extends IRule {
 		return this
 	}
 
-	map(key: Key, mods: Mod[] = []): BasedKeyMap {
+	map(key: Key, mods: IMod[] = []): BasedKeyMap {
 		const m = new BasedKeyMap(this, key, mods, this.bu)
 		this.maps.push(m)
 		return m
@@ -559,7 +560,7 @@ export class RuleBased extends IRule {
 		return l
 	}
 
-	mapTo(key: Key | Mod, mods: Mod[]): RuleBased {
+	mapTo(key: Key | Mod, mods: IMod[]): RuleBased {
 		this.comboMode = true
 		this.comboTarget = { key, mods }
 		return this
@@ -568,7 +569,7 @@ export class RuleBased extends IRule {
 
 export class Layer extends IDesc {
 	key: Key
-	mods: Mod[] = []
+	mods: IMod[] = []
 	rule: RuleBased
 	parent?: Layer
 	separated: boolean = false
@@ -608,7 +609,7 @@ export class Layer extends IDesc {
 		return subLayer
 	}
 
-	map(key: Key, mods: Mod[] = []): LayerKeyMap {
+	map(key: Key, mods: IMod[] = []): LayerKeyMap {
 		const m = new LayerKeyMap(this, key, mods)
 		this.maps.push(m)
 		return m
@@ -619,10 +620,10 @@ export class Layer extends IDesc {
 abstract class IMap extends IDesc {
 	protected bu!: Config
 	key: Key
-	mods: Mod[]
-	keys: IKeys = []
+	mods: IMod[]
+	keys: IKeyDefine = []
 
-	constructor(k: Key, mods: Mod[] = [], builder?: Config) {
+	constructor(k: Key, mods: IMod[] = [], builder?: Config) {
 
 		super()
 
@@ -635,7 +636,7 @@ abstract class IMap extends IDesc {
 		return this.dsc || `IMap: ${this.key}`
 	}
 
-	to(dst: IKey, mods?: Mod[]) {
+	to(dst: IKey, mods?: IMod[]) {
 		this.keys.push({ key: dst, mods: mods })
 		return this
 	}
@@ -648,7 +649,7 @@ abstract class IMap extends IDesc {
 export class RuleKeyMap extends IMap {
 	rule: Rule
 
-	constructor(rule: Rule, k: Key, mods: Mod[] = []) {
+	constructor(rule: Rule, k: Key, mods: IMod[] = []) {
 		super(k, mods)
 		this.rule = rule
 	}
@@ -659,7 +660,7 @@ export class BasedKeyMap extends IMap {
 	rule: RuleBased
 	separated: boolean = false
 
-	constructor(rule: RuleBased, k: Key, mods: Mod[] = [], bu: Config) {
+	constructor(rule: RuleBased, k: Key, mods: IMod[] = [], bu: Config) {
 		super(k, mods, bu)
 		this.rule = rule
 		const ctxDesc = `${rule.dsc || 'RuleBased'}.map(${k})`
@@ -680,7 +681,7 @@ export class LayerKeyMap extends IMap {
 	layer: Layer
 	separated: boolean = false
 
-	constructor(layer: Layer, k: Key, mods: Mod[]) {
+	constructor(layer: Layer, k: Key, mods: IMod[]) {
 		super(k, mods)
 		this.layer = layer
 	}
@@ -694,11 +695,11 @@ export class LayerKeyMap extends IMap {
 export class SimpleKeyMap{
 	cfg: Config
 	key: Key
-	mods: Mod[]
+	mods: IMod[]
 	dst?: IKey
-	dstMods?: Mod[]
+	dstMods?: IMod[]
 
-	constructor(cfg: Config, key: Key, mods: Mod[] = []) {
+	constructor(cfg: Config, key: Key, mods: IMod[] = []) {
 		this.cfg = cfg
 		this.key = key
 		this.mods = mods
@@ -706,7 +707,7 @@ export class SimpleKeyMap{
 		cfg.chkDupKey(key, mods, [], ctxDesc)
 	}
 
-	to(dst: IKey, mods?: Mod[]): SimpleKeyMap {
+	to(dst: IKey, mods?: IMod[]): SimpleKeyMap {
 		this.dst = dst
 		this.dstMods = mods
 		return this
