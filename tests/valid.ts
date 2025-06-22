@@ -108,15 +108,17 @@ describe('Key Validation', () => {
         let co = new Config()
         co.map(k.a).to(k.b)
         co.map(k.a).to(k.c)
+        co.toJSON()
       }).toThrow('Duplicate key combination: a in Config.map(a)')
     })
 
     test('should throw error when same simple key with mods is mapped twice', () => {
       expect(() => {
         let co = new Config()
-        co.map(k.a, [mod.cmd]).to(k.b)
-        co.map(k.a, [mod.cmd]).to(k.c)
-      }).toThrow('Duplicate key combination: a+cmd in Config.map(a)')
+        co.map(k.a, [mod.left_command]).to(k.b)
+        co.map(k.a, [mod.left_command]).to(k.c)
+        co.toJSON()
+      }).toThrow('Duplicate key combination: a+left_command in Config.map(a)')
     })
   })
 })

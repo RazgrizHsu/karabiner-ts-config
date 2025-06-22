@@ -3,7 +3,8 @@ import { Key, Mouse, Mod } from './enums'
 import { icon } from './icon'
 
 export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
-export type IKeyDefine = Array<{ key: IKey, mods?: IMod[] }>
+export type IKeyDefine = { key: IKey, mods?: IMod[] }
+export type IKeyDefines = Array<IKeyDefine>
 export type IMod = Key | Mod
 
 namespace util {
@@ -49,7 +50,7 @@ namespace cfg {
 		return layVnms
 	}
 
-	const procKeyMaps = (maps: Array<{ key: Key, mods: IMod[], keys: IKeyDefine, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
+	const procKeyMaps = (maps: Array<{ key: Key, mods: IMod[], keys: IKeyDefines, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
 		const mrs: IManipulator[] = []
 		for (const map of maps) {
 			for (const mapk of map.keys) {
@@ -243,13 +244,13 @@ namespace cfg {
 			}
 
 			let to: { key_code: string; modifiers?: string[] }
-			if (typeof sm.dst === 'string' && !Object.values(Key).includes(sm.dst as Key)) {
+			if (typeof sm.dst.key === 'string' && !Object.values(Key).includes(sm.dst.key as Key)) {
 				continue
 			}
 
 			to = {
-				key_code: sm.dst as Key,
-				...(sm.dstMods?.length && { modifiers: sm.dstMods.map(m => m.toString()) })
+				key_code: sm.dst.key as Key,
+				...(sm.dst.mods?.length && { modifiers: sm.dst.mods.map(m => m.toString()) })
 			}
 
 			smods.push({ from, to })
@@ -258,6 +259,13 @@ namespace cfg {
 	}
 
 	export function toConfig(bu: Config) {
+
+		for (const sm of bu.simples) {
+			if (sm.dst) {
+				const ctxDesc = `Config.map(${sm.key})`
+				bu.chkDupKey(sm.key, sm.mods, [], ctxDesc)
+			}
+		}
 
 		for (const rub of bu.ruleBsds) {
 			const mks = new Set(rub.maps.map(m => m.key))
@@ -621,7 +629,7 @@ abstract class IMap extends IDesc {
 	protected bu!: Config
 	key: Key
 	mods: IMod[]
-	keys: IKeyDefine = []
+	keys: IKeyDefines = []
 
 	constructor(k: Key, mods: IMod[] = [], builder?: Config) {
 
@@ -696,20 +704,16 @@ export class SimpleKeyMap{
 	cfg: Config
 	key: Key
 	mods: IMod[]
-	dst?: IKey
-	dstMods?: IMod[]
+	dst?: IKeyDefine
 
 	constructor(cfg: Config, key: Key, mods: IMod[] = []) {
 		this.cfg = cfg
 		this.key = key
 		this.mods = mods
-		const ctxDesc = `Config.map(${key})`
-		cfg.chkDupKey(key, mods, [], ctxDesc)
 	}
 
 	to(dst: IKey, mods?: IMod[]): SimpleKeyMap {
-		this.dst = dst
-		this.dstMods = mods
+		this.dst = { key: dst, mods }
 		return this
 	}
 
