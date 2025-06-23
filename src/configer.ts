@@ -1,11 +1,18 @@
-import { IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator, IToEvent, ISimpleModification, IDevice, IDeviceIdentifiers } from './types'
+import { IAlone, IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator } from './types'
+import { IToEvent } from './types'
+import { IDevice, IDeviceIdentifiers } from './types'
+import { ISimple } from './types'
+
 import { Key, Mouse, Mod } from './enums'
 import { icon } from './icon'
+import { argv0 } from 'process'
 
 export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
 export type IKeyDefine = { key: IKey, mods?: IMod[] }
 export type IKeyDefines = Array<IKeyDefine>
 export type IMod = Key | Mod
+
+type IOnAlone = { key?:Key, holdMs?:number }
 
 namespace util {
 	export function mkCmd_OsaOpen(app: string, url: string): string {
@@ -71,7 +78,7 @@ namespace cfg {
 		const exclLays = ru.layers.map(sl => sl.vName)
 
 
-		let onAlone = { key_code: Key.escape } as any
+		let onAlone:IAlone = { key_code: Key.escape }
 		if ( ru.onAlone && ru.onAlone.key ) {
 			onAlone = { key_code: ru.onAlone.key }
 			if ( ru.onAlone.holdMs ) onAlone.hold_down_milliseconds = ru.onAlone.holdMs
@@ -233,8 +240,8 @@ namespace cfg {
 		return rus
 	}
 
-	const procSimpleMods = (simpleMaps: SimpleKeyMap[]): ISimpleModification[] => {
-		const smods: ISimpleModification[] = []
+	const procSimpleMods = (simpleMaps: SimpleKeyMap[]): ISimple[] => {
+		const smods: ISimple[] = []
 		for (const sm of simpleMaps) {
 			if (!sm.dst) continue
 
@@ -533,7 +540,7 @@ export class RuleBased extends IRule {
 	layers: Layer[] = []
 
 	//"to_if_alone": [{ "key_code": "caps_lock", "hold_down_milliseconds": 100 }]
-	onAlone: { key?:Key, holdMs?:number } = {}
+	onAlone: IOnAlone = {}
 
 	constructor(bu: Config, k: Key, trigMods: IMod[]) {
 		super(bu)
@@ -654,14 +661,26 @@ abstract class IMap extends IDesc {
 	}
 }
 
-export class RuleKeyMap extends IMap {
-	rule: Rule
+export class SimpleKeyMap{
+	cfg: Config
+	key: Key
+	mods: IMod[]
+	dst?: IKeyDefine
 
-	constructor(rule: Rule, k: Key, mods: IMod[] = []) {
-		super(k, mods)
-		this.rule = rule
+	constructor(cfg: Config, key: Key, mods: IMod[] = []) {
+		this.cfg = cfg
+		this.key = key
+		this.mods = mods
 	}
 
+	to(dst: IKey, mods?: IMod[]): SimpleKeyMap {
+		this.dst = { key: dst, mods }
+		return this
+	}
+
+	toOsaOpen(app: string, url: string): SimpleKeyMap {
+		return this.to(util.mkCmd_OsaOpen(app, url))
+	}
 }
 
 export class BasedKeyMap extends IMap {
@@ -700,24 +719,43 @@ export class LayerKeyMap extends IMap {
 	}
 }
 
-export class SimpleKeyMap{
-	cfg: Config
+type IParams = 	{
+	delayedActionMs?:number
+	thresholdMs?:number
+}
+
+class RuleKeyMapHoldInfo{
+	private map:IMap
 	key: Key
-	mods: IMod[]
-	dst?: IKeyDefine
 
-	constructor(cfg: Config, key: Key, mods: IMod[] = []) {
-		this.cfg = cfg
-		this.key = key
-		this.mods = mods
+	params: IParams = {}
+	constructor( map:IMap, k:Key){
+		this.map = map
+		this.key = k
 	}
 
-	to(dst: IKey, mods?: IMod[]): SimpleKeyMap {
-		this.dst = { key: dst, mods }
-		return this
+	setParam( key:keyof IParams, value:any ){
+		this.params[key] = value
 	}
 
-	toOsaOpen(app: string, url: string): SimpleKeyMap {
-		return this.to(util.mkCmd_OsaOpen(app, url))
+	desc( desc:string ){
+		this.map.desc( desc )
 	}
 }
+
+export class RuleKeyMap extends IMap {
+	rule: Rule
+
+	holdInfo?:RuleKeyMapHoldInfo
+
+	constructor(rule: Rule, k: Key, mods: IMod[] = []) {
+		super(k, mods)
+		this.rule = rule
+	}
+
+	onHold( k:Key ){
+		this.holdInfo = new RuleKeyMapHoldInfo(this,k)
+		return this.holdInfo
+	}
+}
+
