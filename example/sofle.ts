@@ -1,4 +1,5 @@
 import { Config, Key as k, Mod as mod } from 'karabiner-ts-config'
+// import { Config, Key as k, Mod as mod } from '../src'
 
 const co = new Config()
 co.global.show_in_menu_bar = true
@@ -10,61 +11,68 @@ co.device({product_id:24926,vendor_id:7504})
 co.map(k.caps_lock).to(k.f16)
 
 
+let ho = co.rule('hold keys')
+ho.setOnHold({ delayedActionMs:120, thresholdMs:160 })
+ho.map(k.z).onHold(k.lctrl).desc('z -> LCTRL')
+ho.map(k.x).onHold(k.lalt).desc('x -> LALT')
+ho.map(k.slash).onHold(k.rctrl).desc('/ -> RALT')
+ho.map(k.period).onHold(k.ralt).desc('. -> RALT')
+
+
 // for fast
-co.map(k.grave_accent_and_tilde,[k.left_command]).to(k.escape)
-co.map(k.right_command,[k.left_command]).to(k.escape)
-co.map(k.spacebar,[k.left_option]).to(k.escape)
-co.map(k.delete_or_backspace,[k.left_shift]).to(k.delete_forward)
-co.map(k.return_or_enter,[k.left_option]).to(k.delete_forward)
-co.map(k.return_or_enter,[k.left_command]).to(k.delete_or_backspace)
+co.map(k.rcmd,[k.lalt]).to(k.escape)
+co.map(k.spacebar,[k.lalt]).to(k.delete_or_backspace)
+co.map(k.return_or_enter,[k.lalt]).to(k.delete_forward)
+co.map(k.return_or_enter,[k.lcmd]).to(k.delete_or_backspace)
+co.map(k.delete_or_backspace,[k.lshift]).to(k.delete_forward) //mac default
 
 
 
 // 因為如果你用layer，它會阻檔其他的hold-cmd行為, 所以只能用直接對應的方式
-const lc = co.rule('Left Cmd')
-lc.map(k.u, [k.left_command]).to(k.hyphen).desc('-')
-lc.map(k.i, [k.left_command]).to(k.equal_sign).desc('=')
-lc.map(k.u, [k.left_command, k.left_shift]).to(k.hyphen, [k.left_shift]).desc('_')
-lc.map(k.i, [k.left_command, k.left_shift]).to(k.equal_sign, [k.left_shift]).desc('+')
+const lc = co.rule('Left Alt')
+lc.map(k.u, [k.lalt]).to(k.hyphen).desc('-')
+lc.map(k.i, [k.lalt]).to(k.equal_sign).desc('=')
+lc.map(k.u, [k.lalt, k.lshift]).to(k.hyphen, [k.lshift]).desc('_')
+lc.map(k.i, [k.lalt, k.lshift]).to(k.equal_sign, [k.lshift]).desc('+')
+lc.map(k.o, [k.lalt]).to(k.open_bracket).desc('[')
+lc.map(k.p, [k.lalt]).to(k.close_bracket).desc(']')
+lc.map(k.o, [k.lalt, k.lshift]).to(k.open_bracket, [k.lshift]).desc('{')
+lc.map(k.p, [k.lalt, k.lshift]).to(k.close_bracket, [k.lshift]).desc('}')
+lc.map(k.backslash, [k.lalt]).to(k.backslash, [k.lshift]).desc('|')
+lc.map(k.semicolon, [k.lalt]).to(k.semicolon, [k.lshift]).desc(':')
+lc.map(k.quote, [k.lalt]).to(k.quote, [k.lshift]).desc('"')
+lc.map(k.comma, [k.lalt]).to(k.comma, [k.lshift]).desc('<')
+lc.map(k.period, [k.lalt]).to(k.period, [k.lshift]).desc('>')
+lc.map(k.slash, [k.lalt]).to(k.slash, [k.lshift]).desc('?')
 
-lc.map(k.o, [k.left_command]).to(k.open_bracket).desc('[')
-lc.map(k.p, [k.left_command]).to(k.close_bracket).desc(']')
-lc.map(k.o, [k.left_command, k.left_shift]).to(k.open_bracket, [k.left_shift]).desc('{')
-lc.map(k.p, [k.left_command, k.left_shift]).to(k.close_bracket, [k.left_shift]).desc('}')
-lc.map(k.slash, [k.left_command]).to(k.slash, [k.left_shift]).desc('?')
-lc.map(k.semicolon, [k.left_command]).to(k.semicolon, [k.left_shift]).desc(':')
-lc.map(k.quote, [k.left_command]).to(k.quote, [k.left_shift]).desc('"')
-lc.map(k.backslash, [k.left_command]).to(k.backslash, [k.left_shift]).desc('|')
-
-
-lc.map(k.n9, [k.left_command]).to(k.n9,[k.left_shift]).desc('(')
-lc.map(k.n0, [k.left_command]).to(k.n0,[k.left_shift]).desc(')')
-
-// const lhr = co.rule('Left Home Rows')
-// lhr.map(k.z)
+lc.map(k.n9, [k.lalt]).to(k.n9,[k.lshift]).desc('(')
+lc.map(k.n0, [k.lalt]).to(k.n0,[k.lshift]).desc(')')
 
 //------------------------------------------------------------------------
 // hyper key
 //------------------------------------------------------------------------
-const bse = co.ruleBaseBy(k.f16)
-.desc('🌟 Hyper')
-.ifAlone(k.escape)
+const bse = co.ruleBaseBy(k.f16) .desc('🌟 Hyper')
+	.ifAlone(k.escape)
 
 bse.map(k.f).to(`open -a 'Finder'`).desc('Finder').separate()
 bse.map(k.t).to(`open -a ghostty`).desc('ghostty').separate()
 bse.map(k.b).to(`open -a Firefox`).desc('Firefox').separate()
 
 // vim type motion
-bse.map(k.k).to(k.up_arrow).desc('Up')
-bse.map(k.j).to(k.down_arrow).desc('Down')
-bse.map(k.h).to(k.left_arrow).desc('Left')
-bse.map(k.l).to(k.right_arrow).desc('Right')
+// bse.map(k.k,[mod.any]).to(k.up_arrow,[mod.any]).desc('Up')
+// bse.map(k.j,[mod.any]).to(k.down_arrow,[mod.any]).desc('Down')
+// bse.map(k.h,[mod.any]).to(k.left_arrow,[mod.any]).desc('Left')
+// bse.map(k.l,[mod.any]).to(k.right_arrow,[mod.any]).desc('Right')
+bse.map(k.k,[mod.any]).to(k.up_arrow).desc('Up')
+bse.map(k.j,[mod.any]).to(k.down_arrow).desc('Down')
+bse.map(k.h,[mod.any]).to(k.left_arrow).desc('Left')
+bse.map(k.l,[mod.any]).to(k.right_arrow).desc('Right')
 
 const la = bse.layer(k.a).desc('sim shift').separate()
-la.map(k.k).to(k.up_arrow,[k.left_shift])
-la.map(k.j).to(k.down_arrow,[k.left_shift])
-la.map(k.h).to(k.left_arrow,[k.left_shift])
-la.map(k.l).to(k.right_arrow,[k.left_shift])
+la.map(k.k).to(k.up_arrow,[k.lshift])
+la.map(k.j).to(k.down_arrow,[k.lshift])
+la.map(k.h).to(k.left_arrow,[k.lshift])
+la.map(k.l).to(k.right_arrow,[k.lshift])
 
 // App Open
 const lo = bse.layer(k.o).desc('Open App').separate()
@@ -88,7 +96,7 @@ lw.map(k.u).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small'
 lw.map(k.i).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 
 // macOS next window
-lw.map(k.n).to(k.grave_accent_and_tilde, [k.left_control, k.left_shift, k.left_option, k.left_command]).desc('Focus Next Window').separate()
+lw.map(k.n).to(k.grave_accent_and_tilde, [k.lctrl, k.lshift, k.lalt, k.lcmd]).desc('Focus Next Window').separate()
 
 // sub layer for resize
 const lwr = lw.layer(k.r).desc('Window resize').separate()

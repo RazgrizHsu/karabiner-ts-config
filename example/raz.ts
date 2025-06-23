@@ -83,14 +83,6 @@ lm.map(k.n).to(k.fastforward).desc('Next Track')
 lm.map(k.b).to(k.rewind).desc('Previous Track')
 
 
-// raycast
-const lr = bse.layer(k.r).desc('Raycast Extensions').separate()
-lr.map(k.c).to(`open raycast://extensions/thomas/color-picker/pick-color`).desc('Color Picker')
-lr.map(k.n).to(`open raycast://extensions/raycast/raycast-notes/raycast-notes`).desc('Notes')
-lr.map(k.e).to(`open raycast://extensions/raycast/emoji-symbols/search-emoji-symbols`).desc('Emoji Search')
-lr.map(k.h).to(`open raycast://extensions/raycast/clipboard-history/clipboard-history`).desc('Clipboard History')
-
-
 // configure your Mac keyboard's Fn + arrow keys to be page/home series shortcuts for quick navigation.
 const fn = co.rule('Fn Navigation')
 fn.map(k.up_arrow, [mod.fn]).to(k.page_up).desc('Page Up')

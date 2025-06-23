@@ -1,3 +1,6 @@
+import { Key, Mouse, Mod } from './enums'
+export { Key, Mouse, Mod }
+
 export interface IKaraCfgGlobal {
 
     show_in_menu_bar: boolean
@@ -34,7 +37,7 @@ export interface IProfile {
 
 export interface IKaraRule {
 	description: string
-	manipulators: IManipulator[]
+	manipulators: (IManipulator|IManipulatorHeld)[]
 }
 
 export interface IAlone {
@@ -52,7 +55,6 @@ export interface IManipulator {
 	to_after_key_up?: IToEvent[]
 	to_if_alone?: IAlone[]
 	conditions?: ICondition[]
-
 }
 
 //             "to_if_held_down": [{ "key_code": "left_shift" }],
@@ -63,9 +65,18 @@ export interface IManipulator {
 //                 "basic.to_delayed_action_delay_milliseconds": 500,
 //                 "basic.to_if_held_down_threshold_milliseconds": 500
 //             }
+
+type ToIfHeldDownItem = {
+  key_code?: string
+  shell_command?: string
+}
+
 export type IManipulatorHeld = IManipulator & {
-	to_if_held_down: {key_code:string}[]
-	to_delayed_action?: { to_if_canceled: {key_code:string}[] }
+	to_if_held_down: ToIfHeldDownItem[]
+	to_delayed_action?: {
+		to_if_canceled: IToEvent[],
+		to_if_invoked?: IToEvent[]
+	}
 
 	parameters: { [key: string]:any }
 }
@@ -87,6 +98,7 @@ export interface IToEvent {
 		name: string
 		value: number
 	}
+	halt?:boolean
 }
 
 export interface ICondition {
@@ -96,15 +108,15 @@ export interface ICondition {
 }
 
 export interface ISimple {
-  from: {
-    key_code: string
-    modifiers?: {
-      mandatory?: string[]
-      optional?: string[]
-    }
-  }
+  from: IFromEvent
   to: {
     key_code: string
     modifiers?: string[]
   }
 }
+
+export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
+export type IKeyDefine = { key: IKey, mods?: IMod[] }
+export type IKeyDefines = Array<IKeyDefine>
+export type IMod = Key | Mod
+export type IMods = IMod[]

@@ -1,16 +1,12 @@
-import { IAlone, IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator } from './types'
+import { IAlone, IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator, IManipulatorHeld } from './types'
 import { IToEvent } from './types'
 import { IDevice, IDeviceIdentifiers } from './types'
 import { ISimple } from './types'
+import { IKey, IMods, Key, Mouse, Mod } from './types'
+import { IKeyDefine, IKeyDefines } from './types'
 
-import { Key, Mouse, Mod } from './enums'
 import { icon } from './icon'
-import { argv0 } from 'process'
 
-export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
-export type IKeyDefine = { key: IKey, mods?: IMod[] }
-export type IKeyDefines = Array<IKeyDefine>
-export type IMod = Key | Mod
 
 type IOnAlone = { key?:Key, holdMs?:number }
 
@@ -22,15 +18,28 @@ namespace util {
 
 namespace cfg {
 
-	const mkMr = (desc: string, keyC: Key, mods: IMod[], toEvent: IToEvent, conds?: any[]) => ({
+	const mkFrom = ( key:IKey, mods:IMods ) => {
+		const isAnyOnlyMod = mods.length == 1 && mods[0].toString() == 'any'
+		const from = {
+			key_code: key as string,
+			...(mods.length > 0 && {
+				modifiers: isAnyOnlyMod
+					? { optional: mods.map(m => m.toString()) }
+					: { mandatory: mods.map(m => m.toString()) }
+			})
+		}
+		return from
+	}
+
+	const mkMr = (desc: string, keyC: Key, mods: IMods, toEvent: IToEvent, conds?: any[]) => ({
 		description: desc,
 		type: 'basic' as const,
-		from: { key_code: keyC, modifiers: mods.length > 0 ? { mandatory: mods.map(m => m.toString()) } : undefined },
+		from: mkFrom(keyC, mods ),
 		to: [toEvent],
 		...(conds && { conditions: conds })
 	})
 
-	const fmtDest = (dst: IKey, dstMods?: IMod[]): IToEvent => {
+	const fmtDest = (dst: IKey, dstMods?: IMods): IToEvent => {
 		if (dst === Mouse.left || dst === Mouse.right || dst === Mouse.middle) return { pointing_button: dst as Mouse }
 		if (typeof dst === 'string' && !Object.values(Key).includes(dst as Key)) return { shell_command: dst }
 
@@ -57,7 +66,7 @@ namespace cfg {
 		return layVnms
 	}
 
-	const procKeyMaps = (maps: Array<{ key: Key, mods: IMod[], keys: IKeyDefines, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
+	const procKeyMaps = (maps: Array<{ key: Key, mods: IMods, keys: IKeyDefines, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
 		const mrs: IManipulator[] = []
 		for (const map of maps) {
 			for (const mapk of map.keys) {
@@ -71,6 +80,56 @@ namespace cfg {
 			}
 		}
 		return mrs
+	}
+
+	const procHeldDownMr = (km: RuleKeyMap): IManipulatorHeld|null => {
+		const hi = km.holdInfo!
+		if( !hi.key && !hi.shell ) {
+			return null
+		}
+
+		const mr: Partial<IManipulatorHeld> = {
+			description: km.dscFul,
+			type: 'basic',
+			from: {
+				key_code: km.key,
+				modifiers: km.mods.length > 0 ? { mandatory: km.mods.map(m => m.toString()) } : {optional:["any"]}
+			}
+		}
+
+		if (km.keys.length > 0) mr.to = km.keys.map(k => fmtDest(k.key, k.mods))
+		if (hi.shell) {
+			mr.to_if_held_down = [{ shell_command: hi.shell }]
+			if (Object.keys(hi.args).length > 0) {
+				if (!mr.parameters) mr.parameters = {}
+				if (hi.args.delayedActionMs !== undefined) mr.parameters['basic.to_delayed_action_delay_milliseconds'] = hi.args.delayedActionMs
+			}
+		}
+		if (hi.key) {
+			const hevt = fmtDest(hi.key, hi.mods)
+			mr.to_if_held_down = [hevt]
+
+			mr.to_if_alone = [{ key_code:km.key, halt:true}]
+			mr.to_delayed_action = { to_if_canceled:[{ key_code:km.key }] }
+
+			let ruha = km.rule.holdArgs
+			let kmha = hi.args
+
+			mr.parameters = {}
+			let msth = ruha?.thresholdMs || kmha.thresholdMs || 250
+			let msda = ruha?.delayedActionMs || kmha.delayedActionMs || 100
+			// let msal = ruha?.aloneTimeoutMs || kmha.aloneTimeoutMs || 250
+			if ( msth ) mr.parameters['basic.to_if_held_down_threshold_milliseconds'] = msth
+			if ( msth ) mr.parameters['basic.to_delayed_action_delay_milliseconds'] = msda
+			// if ( msal ) mr.parameters['basic.to_if_alone_timeout_milliseconds'] = msal
+
+		}
+
+		// Add parameters if any
+
+		console.info(`hold: ${JSON.stringify(mr)}`)
+
+		return mr as IManipulatorHeld
 	}
 
 	const procTrigMrs = (ru: RuleBased): IManipulator[] => {
@@ -245,15 +304,9 @@ namespace cfg {
 		for (const sm of simpleMaps) {
 			if (!sm.dst) continue
 
-			const from = {
-				key_code: sm.key,
-				...(sm.mods.length > 0 && { modifiers: { mandatory: sm.mods.map(m => m.toString()) } })
-			}
-
+			let from = mkFrom( sm.key, sm.mods )
 			let to: { key_code: string; modifiers?: string[] }
-			if (typeof sm.dst.key === 'string' && !Object.values(Key).includes(sm.dst.key as Key)) {
-				continue
-			}
+			if (!Object.values(Key).includes(sm.dst.key as Key)) throw new Error(`the key[${sm.dst.key}] is wrong`)
 
 			to = {
 				key_code: sm.dst.key as Key,
@@ -266,11 +319,12 @@ namespace cfg {
 	}
 
 	export function toConfig(bu: Config) {
+		bu.keyMap.clear()
 
 		for (const sm of bu.simples) {
 			if (sm.dst) {
 				const ctxDesc = `Config.map(${sm.key})`
-				bu.chkDupKey(sm.key, sm.mods, [], ctxDesc)
+				bu.chkDupKey(sm.key, sm.mods, ['simple'], ctxDesc)
 			}
 		}
 
@@ -320,13 +374,33 @@ namespace cfg {
 
 		for (const ru of bu.rules) {
 			const mrs: IManipulator[] = []
-			const ruKeyMaps = ru.maps.map(m => ({
+
+			// Process regular maps and held down maps separately
+			const regularMaps: typeof ru.maps = []
+			const heldDownMaps: typeof ru.maps = []
+
+			for (const map of ru.maps) {
+				if (map.holdInfo) {
+					heldDownMaps.push(map)
+				} else {
+					regularMaps.push(map)
+				}
+			}
+
+			// Process regular maps
+			const ruKeyMaps = regularMaps.map(m => ({
 				key: m.key,
 				mods: m.mods,
 				keys: m.keys,
 				desc: m.dscFul
 			}))
 			mrs.push(...procKeyMaps(ruKeyMaps))
+
+			// Process held down maps
+			for (const heldMap of heldDownMaps) {
+				let m = procHeldDownMr(heldMap)
+				if( m ) mrs.push(m)
+			}
 
 			let desc = ru.dscFul
 			if (ru.maps.length > 1) {
@@ -434,13 +508,13 @@ export class Config {
 		return ruleBuilder
 	}
 
-	map(key: Key, mods: IMod[] = []): SimpleKeyMap {
+	map(key: Key, mods: IMods = []): SimpleKeyMap {
 		const sm = new SimpleKeyMap(this, key, mods)
 		this.simples.push(sm)
 		return sm
 	}
 
-	ruleBaseBy(key: Key, mods: IMod[] = []): RuleBased {
+	ruleBaseBy(key: Key, mods: IMods = []): RuleBased {
 		const baseKeyId = `${key}+${mods.join(',')}`
 
 		for (const [_, ks] of this.keyMap) {
@@ -458,7 +532,7 @@ export class Config {
 		return this
 	}
 
-	chkDupKey(key: Key, mods: IMod[] = [], conds: string[] = [], ctxDesc?: string): void {
+	chkDupKey(key: Key, mods: IMods = [], conds: string[] = [], ctxDesc?: string): void {
 		const sk = `${key}+${mods.join(',')}`
 		const sc = conds.join(',')
 
@@ -522,27 +596,31 @@ export class Rule extends IRule {
 		return this.dsc || `Rule: Non-Desc, Maps[ ${this.maps.length} ]`
 	}
 
-	map(key: Key, mods: IMod[] = []): RuleKeyMap {
+	map(key: Key, mods: IMods = []): RuleKeyMap {
 		const mp = new RuleKeyMap(this, key, mods)
 		this.maps.push(mp)
 		return mp
 	}
 
+	holdArgs?:IHoldArgs
+	setOnHold( ps:IHoldArgsPart ){
+		this.holdArgs = Object.assign({}, this.holdArgs, ps)
+	}
 }
 
 export class RuleBased extends IRule {
 	maps: BasedKeyMap[] = []
 
 	baseKey: Key
-	baseMods: IMod[]
+	baseMods: IMods
 	comboMode: boolean = false
-	comboTarget?: { key: Key | Mod, mods: IMod[] }
+	comboTarget?: { key: Key | Mod, mods: IMods }
 	layers: Layer[] = []
 
 	//"to_if_alone": [{ "key_code": "caps_lock", "hold_down_milliseconds": 100 }]
 	onAlone: IOnAlone = {}
 
-	constructor(bu: Config, k: Key, trigMods: IMod[]) {
+	constructor(bu: Config, k: Key, trigMods: IMods) {
 		super(bu)
 		this.baseKey = k
 		this.baseMods = trigMods
@@ -563,7 +641,7 @@ export class RuleBased extends IRule {
 		return this
 	}
 
-	map(key: Key, mods: IMod[] = []): BasedKeyMap {
+	map(key: Key, mods: IMods = []): BasedKeyMap {
 		const m = new BasedKeyMap(this, key, mods, this.bu)
 		this.maps.push(m)
 		return m
@@ -575,7 +653,7 @@ export class RuleBased extends IRule {
 		return l
 	}
 
-	mapTo(key: Key | Mod, mods: IMod[]): RuleBased {
+	mapTo(key: Key | Mod, mods: IMods): RuleBased {
 		this.comboMode = true
 		this.comboTarget = { key, mods }
 		return this
@@ -584,7 +662,7 @@ export class RuleBased extends IRule {
 
 export class Layer extends IDesc {
 	key: Key
-	mods: IMod[] = []
+	mods: IMods = []
 	rule: RuleBased
 	parent?: Layer
 	separated: boolean = false
@@ -624,7 +702,7 @@ export class Layer extends IDesc {
 		return subLayer
 	}
 
-	map(key: Key, mods: IMod[] = []): LayerKeyMap {
+	map(key: Key, mods: IMods = []): LayerKeyMap {
 		const m = new LayerKeyMap(this, key, mods)
 		this.maps.push(m)
 		return m
@@ -635,10 +713,10 @@ export class Layer extends IDesc {
 abstract class IMap extends IDesc {
 	protected bu!: Config
 	key: Key
-	mods: IMod[]
+	mods: IMods
 	keys: IKeyDefines = []
 
-	constructor(k: Key, mods: IMod[] = [], builder?: Config) {
+	constructor(k: Key, mods: IMods = [], builder?: Config) {
 
 		super()
 
@@ -651,7 +729,7 @@ abstract class IMap extends IDesc {
 		return this.dsc || `IMap: ${this.key}`
 	}
 
-	to(dst: IKey, mods?: IMod[]) {
+	to(dst: IKey, mods?: IMods) {
 		this.keys.push({ key: dst, mods: mods })
 		return this
 	}
@@ -664,16 +742,16 @@ abstract class IMap extends IDesc {
 export class SimpleKeyMap{
 	cfg: Config
 	key: Key
-	mods: IMod[]
+	mods: IMods
 	dst?: IKeyDefine
 
-	constructor(cfg: Config, key: Key, mods: IMod[] = []) {
+	constructor(cfg: Config, key: Key, mods: IMods = []) {
 		this.cfg = cfg
 		this.key = key
 		this.mods = mods
 	}
 
-	to(dst: IKey, mods?: IMod[]): SimpleKeyMap {
+	to(dst: IKey, mods?: IMods): SimpleKeyMap {
 		this.dst = { key: dst, mods }
 		return this
 	}
@@ -687,7 +765,8 @@ export class BasedKeyMap extends IMap {
 	rule: RuleBased
 	separated: boolean = false
 
-	constructor(rule: RuleBased, k: Key, mods: IMod[] = [], bu: Config) {
+
+	constructor(rule: RuleBased, k: Key, mods: IMods = [], bu: Config) {
 		super(k, mods, bu)
 		this.rule = rule
 		const ctxDesc = `${rule.dsc || 'RuleBased'}.map(${k})`
@@ -708,7 +787,7 @@ export class LayerKeyMap extends IMap {
 	layer: Layer
 	separated: boolean = false
 
-	constructor(layer: Layer, k: Key, mods: IMod[]) {
+	constructor(layer: Layer, k: Key, mods: IMods) {
 		super(k, mods)
 		this.layer = layer
 	}
@@ -719,43 +798,64 @@ export class LayerKeyMap extends IMap {
 	}
 }
 
-type IParams = 	{
+type IHoldArgs = 	{
 	delayedActionMs?:number
-	thresholdMs?:number
+	thresholdMs:number
+	aloneTimeoutMs:number
+
+	[key:string]:any
 }
+type IHoldArgsPart = Partial<IHoldArgs>
 
-class RuleKeyMapHoldInfo{
-	private map:IMap
-	key: Key
+class HoldInfo{
+	public map:IMap
+	key?: Key
+	mods?: IMods
+	shell?: string
+	args: IHoldArgsPart = {}
 
-	params: IParams = {}
-	constructor( map:IMap, k:Key){
+	constructor( map:IMap){
 		this.map = map
-		this.key = k
 	}
 
-	setParam( key:keyof IParams, value:any ){
-		this.params[key] = value
+	setArgs( args:IHoldArgsPart ){
+		this.args = Object.assign( {}, this.args, args )
+		return this
 	}
 
-	desc( desc:string ){
+	setParam( key:string, value:any ): HoldInfo {
+		this.args[key] = value
+		return this
+	}
+
+	desc( desc:string ): HoldInfo {
 		this.map.desc( desc )
+		return this
 	}
 }
 
 export class RuleKeyMap extends IMap {
 	rule: Rule
+	holdInfo?:HoldInfo
 
-	holdInfo?:RuleKeyMapHoldInfo
-
-	constructor(rule: Rule, k: Key, mods: IMod[] = []) {
+	constructor(rule: Rule, k: Key, mods: IMods = []) {
 		super(k, mods)
 		this.rule = rule
 	}
 
-	onHold( k:Key ){
-		this.holdInfo = new RuleKeyMapHoldInfo(this,k)
+
+	onHold( k:Key, mods?:IMods ): HoldInfo {
+		this.holdInfo = new HoldInfo(this)
+		this.holdInfo.key = k
+		this.holdInfo.mods = mods
 		return this.holdInfo
 	}
+
+	onHoldCmd( shell: string ): HoldInfo {
+		this.holdInfo = new HoldInfo(this)
+		this.holdInfo.shell = shell
+		return this.holdInfo
+	}
+
 }
 

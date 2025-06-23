@@ -120,6 +120,38 @@ fnNav.map(k.left_arrow, [mod.fn]).to(k.home).desc('Fn+Left to Home')
 fnNav.map(k.right_arrow, [mod.fn]).to(k.end).desc('Fn+Right to End')
 ```
 
+### Home Row Modifiers
+
+Transform your home row keys into modifier keys when held down, while maintaining their normal function when typed. This technique is popular among users who want to minimize finger movement for common modifiers:
+
+```typescript
+// Create a rule for home row modifiers
+const homeRow = co.rule('Home Row Modifiers')
+
+// Set global hold parameters for this rule
+// Each person has different typing speed, you may need to adjust these parameters
+// Use karabiner-eventviewer to see what delay works best for you
+homeRow.setOnHold({ delayedActionMs: 120, thresholdMs: 160 })
+
+// Map home row keys to modifiers when held
+homeRow.map(k.a).onHold(k.lctrl).desc('A -> Left Control')
+homeRow.map(k.s).onHold(k.lalt).desc('S -> Left Alt') 
+homeRow.map(k.d).onHold(k.lcmd).desc('D -> Left Command')
+homeRow.map(k.f).onHold(k.lshift).desc('F -> Left Shift')
+
+// You can also set individual parameters for specific keys
+// homeRow.map(k.j).onHold(k.rshift).setArgs({thresholdMs: 125}).desc('J -> Right Shift')
+```
+
+**Parameters:**
+- `delayedActionMs`: How long to wait before starting to repeat the held key (default: 120ms)
+- `thresholdMs`: Minimum time the key must be held to trigger the modifier (default: 160ms)
+
+**Usage Tips:**
+- Use Karabiner-EventViewer to fine-tune timing parameters for your typing speed
+- Start with conservative timing and adjust based on your comfort
+- Consider your most frequently used modifiers when choosing which keys to map
+
 ## Device Configuration
 
 Configure specific devices to apply different settings based on keyboard or mouse hardware:
