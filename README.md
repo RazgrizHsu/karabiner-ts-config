@@ -349,7 +349,7 @@ sWR.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc(
 
 ## More Complex Examples
 
-For a more in-depth look at advanced configurations, you can check out the [raz.ts](./example/raz.tw) example file
+For a more in-depth look at advanced configurations, you can check out the [raz.ts](./example/raz.ts) example file
 
 
 ## known limitations

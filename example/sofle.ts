@@ -12,13 +12,20 @@ co.map(k.caps_lock).to(k.f16)
 
 
 let ho = co.rule('hold keys: HomeRow')
-ho.setOnHold({ delayedActionMs:110, thresholdMs:150 })
+
+// 20250625: Currently cannot find a better approach
+// For combinations like shift+alt, each key needs to wait 167ms to be recognized as hold
+// If the timing is reduced, complex shortcuts trigger faster but typing 'asdffdsa' causes more misfires
+ho.setOnHold({ delayedActionMs:130, thresholdMs:180 })
 ho.map(k.a,[mod.any]).onHold(k.lshift).desc('lshift')
 ho.map(k.s,[mod.any]).onHold(k.lctrl).desc('lctrl')
 ho.map(k.d,[mod.any]).onHold(k.lalt).desc('lalt')
+
 ho.map(k.semicolon,[mod.any]).onHold(k.rshift).desc('rshift')
 ho.map(k.l,[mod.any]).onHold(k.rctrl).desc('rctrl')
 ho.map(k.k,[mod.any]).onHold(k.ralt).desc('ralt')
+
+// Using zx./ version allows independent shift key usage, but asdf keys are still more convenient
 // ho.map(k.z).onHold(k.lctrl).desc('z -> LCTRL')
 // ho.map(k.x).onHold(k.lalt).desc('x -> LALT')
 // ho.map(k.slash).onHold(k.rctrl).desc('/ -> RALT')
@@ -35,24 +42,22 @@ co.map(k.return_or_enter,[k.lcmd,k.lshift]).to(k.delete_forward)
 
 
 
-const lc = co.rule('Left Alt')
-lc.map(k.u, [k.lalt]).to(k.hyphen).desc('-')
-lc.map(k.i, [k.lalt]).to(k.equal_sign).desc('=')
-lc.map(k.u, [k.lalt, k.lshift]).to(k.hyphen, [k.lshift]).desc('_')
-lc.map(k.i, [k.lalt, k.lshift]).to(k.equal_sign, [k.lshift]).desc('+')
-lc.map(k.o, [k.lalt]).to(k.open_bracket).desc('[')
-lc.map(k.p, [k.lalt]).to(k.close_bracket).desc(']')
-lc.map(k.o, [k.lalt, k.lshift]).to(k.open_bracket, [k.lshift]).desc('{')
-lc.map(k.p, [k.lalt, k.lshift]).to(k.close_bracket, [k.lshift]).desc('}')
-lc.map(k.backslash, [k.lalt]).to(k.backslash, [k.lshift]).desc('|')
-lc.map(k.semicolon, [k.lalt]).to(k.semicolon, [k.lshift]).desc(':')
-lc.map(k.quote, [k.lalt]).to(k.quote, [k.lshift]).desc('"')
-lc.map(k.comma, [k.lalt]).to(k.comma, [k.lshift]).desc('<')
-lc.map(k.period, [k.lalt]).to(k.period, [k.lshift]).desc('>')
-lc.map(k.slash, [k.lalt]).to(k.slash, [k.lshift]).desc('?')
 
-lc.map(k.n9, [k.lalt]).to(k.n9,[k.lshift]).desc('(')
-lc.map(k.n0, [k.lalt]).to(k.n0,[k.lshift]).desc(')')
+const lc = co.rule('Left Alt')
+let modLA = [k.lalt,mod.any]
+lc.map(k.u, modLA).to(k.hyphen).desc('-')
+lc.map(k.i, modLA).to(k.equal_sign).desc('=')
+lc.map(k.o, modLA).to(k.open_bracket).desc('[')
+lc.map(k.p, modLA).to(k.close_bracket).desc(']')
+lc.map(k.backslash, modLA).to(k.backslash, [k.lshift]).desc('|')
+lc.map(k.semicolon, modLA).to(k.semicolon, [k.lshift]).desc(':')
+lc.map(k.quote, modLA).to(k.quote, [k.lshift]).desc('"')
+lc.map(k.comma, modLA).to(k.comma, [k.lshift]).desc('<')
+lc.map(k.period, modLA).to(k.period, [k.lshift]).desc('>')
+lc.map(k.slash, modLA).to(k.slash, [k.lshift]).desc('?')
+
+lc.map(k.n9, modLA).to(k.n9,[k.lshift]).desc('(')
+lc.map(k.n0, modLA).to(k.n0,[k.lshift]).desc(')')
 
 //------------------------------------------------------------------------
 // hyper key
@@ -126,11 +131,11 @@ lwr.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc(
 
 // system
 const ls = bse.layer(k.s).desc('System Control').separate()
-ls.map(k.u).to(k.volume_increment).desc('Volume Up')
-ls.map(k.j).to(k.volume_decrement).desc('Volume Down')
+ls.map(k.i).to(k.volume_increment).desc('Volume Up')
+ls.map(k.u).to(k.volume_decrement).desc('Volume Down')
 ls.map(k.spacebar).to(k.play_or_pause).desc('Play/Paused')
-ls.map(k.n).to(k.fastforward).desc('Next Track')
-ls.map(k.h).to(k.rewind).desc('Previous Track')
+ls.map(k.period).to(k.fastforward).desc('Next Track')
+ls.map(k.comma).to(k.rewind).desc('Previous Track')
 
 // supported on macOS 13 & above (need to have set up 'Background Music' in Accessibility > Audio first to use it).
 ls.map(k.b).to(`CURRENT_STATE=$(defaults read com.apple.ComfortSounds "comfortSoundsEnabled" 2>/dev/null || echo "0"); NEW_STATE_BOOL=$( [ "$CURRENT_STATE" = "1" ] && echo "false" || echo "true" ); defaults write com.apple.ComfortSounds "comfortSoundsEnabled" -bool "$NEW_STATE_BOOL"; launchctl kickstart -k gui/$(id -u)/com.apple.accessibility.heard`).desc('Background Music')

@@ -115,7 +115,7 @@ export interface ISimple {
   }
 }
 
-export type IKey = Key | Mouse | string | Array<Key | Mouse | string>
+export type IKey = Key | Mouse | string
 export type IKeyDefine = { key: IKey, mods?: IMod[] }
 export type IKeyDefines = Array<IKeyDefine>
 export type IMod = Key | Mod

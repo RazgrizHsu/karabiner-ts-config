@@ -8,6 +8,8 @@ import { IKeyDefine, IKeyDefines } from './types'
 import { icon } from './icon'
 
 
+export const DEBUG = false
+
 type IOnAlone = { key?:Key, holdMs?:number }
 
 namespace util {
@@ -18,20 +20,37 @@ namespace util {
 
 namespace cfg {
 
-	const mkFrom = ( key:IKey, mods:IMods ) => {
-		const isAnyOnlyMod = mods.length == 1 && mods[0].toString() == 'any'
+	const mkFrom = (key: IKey, mods: IMods) => {
 
-		console.info(`[mkForm] k[${key}] mods`,mods)
-		const from = {
+		const from: any = {
 			key_code: key as string,
-			...(mods.length > 0 && {
-				modifiers: isAnyOnlyMod
-					? { optional: mods.map(m => m.toString()) }
-					: { mandatory: mods.map(m => m.toString()) }
-			})
 		}
-		return from
-	}
+
+		const mandatoryMods: string[] = []
+		let hasAny = false
+
+		mods.forEach(mod => {
+			if (mod.toString() === 'any') {
+				hasAny = true
+			} else {
+				mandatoryMods.push(mod.toString())
+			}
+		})
+
+		if (hasAny || mandatoryMods.length > 0) {
+			from.modifiers = {}
+
+			if (hasAny) {
+				from.modifiers.optional = ['any']
+			}
+
+			if (mandatoryMods.length > 0) {
+				from.modifiers.mandatory = mandatoryMods
+			}
+		}
+
+		return from;
+	};
 
 	const mkMr = (desc: string, keyC: Key, mods: IMods, toEvent: IToEvent, conds?: any[]) => ({
 		description: desc,
@@ -108,15 +127,16 @@ namespace cfg {
 			const hevt = fmtDest(hi.key, hi.mods)
 			mr.to_if_held_down = [hevt]
 
-			mr.to_if_alone = [{ key_code:km.key, halt:true}]
+			mr.to_if_alone = [{ key_code:km.key}]
+			// mr.to_if_alone = [{ key_code:km.key, halt:true}]
 			mr.to_delayed_action = { to_if_canceled:[{ key_code:km.key }] }
 
 			let ruha = km.rule.holdArgs
 			let kmha = hi.args
 
 			mr.parameters = {}
-			let msth = ruha?.thresholdMs || kmha.thresholdMs || 250
-			let msda = ruha?.delayedActionMs || kmha.delayedActionMs || 100
+			let msth = ruha?.thresholdMs || kmha.thresholdMs || 150
+			let msda = ruha?.delayedActionMs || kmha.delayedActionMs || 150
 			// let msal = ruha?.aloneTimeoutMs || kmha.aloneTimeoutMs || 250
 			if ( msth ) mr.parameters['basic.to_if_held_down_threshold_milliseconds'] = msth
 			if ( msth ) mr.parameters['basic.to_delayed_action_delay_milliseconds'] = msda
@@ -126,7 +146,7 @@ namespace cfg {
 
 		// Add parameters if any
 
-		console.info(`hold: ${JSON.stringify(mr)}`)
+		if (DEBUG) console.info(`hold: ${JSON.stringify(mr)}`)
 
 		return mr as IManipulatorHeld
 	}
@@ -381,7 +401,8 @@ namespace cfg {
 			for (const map of ru.maps) {
 				if (map.holdInfo) {
 					heldDownMaps.push(map)
-				} else {
+				}
+				else {
 					regularMaps.push(map)
 				}
 			}
@@ -832,6 +853,34 @@ class HoldInfo{
 		return this
 	}
 }
+
+// export class RuleMapSims extends IDesc {
+// 	protected bu!: Config
+// 	rule: Rule
+//
+// 	ks: IKey[]
+// 	mods: IMods
+// 	kto?: IKeyDefine
+//
+// 	constructor(ru:Rule, ks: IKey[], mods: IMods = [], builder?: Config) {
+//
+// 		super()
+//
+// 		this.rule = ru
+// 		this.ks = ks
+// 		this.mods = mods
+// 		if (builder) this.bu = builder
+// 	}
+//
+// 	get dscFul() {
+// 		return this.dsc || `IMapSim: ${this.ks}`
+// 	}
+//
+// 	to(dst: IKey, mods?: IMods) {
+// 		this.kto={ key: dst, mods: mods }
+// 		return this
+// 	}
+// }
 
 export class RuleKeyMap extends IMap {
 	rule: Rule
