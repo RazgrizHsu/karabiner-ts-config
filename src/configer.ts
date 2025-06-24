@@ -20,6 +20,8 @@ namespace cfg {
 
 	const mkFrom = ( key:IKey, mods:IMods ) => {
 		const isAnyOnlyMod = mods.length == 1 && mods[0].toString() == 'any'
+
+		console.info(`[mkForm] k[${key}] mods`,mods)
 		const from = {
 			key_code: key as string,
 			...(mods.length > 0 && {
@@ -91,10 +93,7 @@ namespace cfg {
 		const mr: Partial<IManipulatorHeld> = {
 			description: km.dscFul,
 			type: 'basic',
-			from: {
-				key_code: km.key,
-				modifiers: km.mods.length > 0 ? { mandatory: km.mods.map(m => m.toString()) } : {optional:["any"]}
-			}
+			from:mkFrom(km.key, km.mods)
 		}
 
 		if (km.keys.length > 0) mr.to = km.keys.map(k => fmtDest(k.key, k.mods))

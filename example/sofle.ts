@@ -11,24 +11,30 @@ co.device({product_id:24926,vendor_id:7504})
 co.map(k.caps_lock).to(k.f16)
 
 
-let ho = co.rule('hold keys')
-ho.setOnHold({ delayedActionMs:120, thresholdMs:160 })
-ho.map(k.z).onHold(k.lctrl).desc('z -> LCTRL')
-ho.map(k.x).onHold(k.lalt).desc('x -> LALT')
-ho.map(k.slash).onHold(k.rctrl).desc('/ -> RALT')
-ho.map(k.period).onHold(k.ralt).desc('. -> RALT')
+let ho = co.rule('hold keys: HomeRow')
+ho.setOnHold({ delayedActionMs:110, thresholdMs:150 })
+ho.map(k.a,[mod.any]).onHold(k.lshift).desc('lshift')
+ho.map(k.s,[mod.any]).onHold(k.lctrl).desc('lctrl')
+ho.map(k.d,[mod.any]).onHold(k.lalt).desc('lalt')
+ho.map(k.semicolon,[mod.any]).onHold(k.rshift).desc('rshift')
+ho.map(k.l,[mod.any]).onHold(k.rctrl).desc('rctrl')
+ho.map(k.k,[mod.any]).onHold(k.ralt).desc('ralt')
+// ho.map(k.z).onHold(k.lctrl).desc('z -> LCTRL')
+// ho.map(k.x).onHold(k.lalt).desc('x -> LALT')
+// ho.map(k.slash).onHold(k.rctrl).desc('/ -> RALT')
+// ho.map(k.period).onHold(k.ralt).desc('. -> RALT')
 
 
 // for fast
-co.map(k.rcmd,[k.lalt]).to(k.escape)
-co.map(k.spacebar,[k.lalt]).to(k.delete_or_backspace)
-co.map(k.return_or_enter,[k.lalt]).to(k.delete_forward)
+// co.map(k.rcmd,[k.lalt]).to(k.escape)
+// co.map(k.spacebar,[k.lalt]).to(k.delete_or_backspace)
+// co.map(k.return_or_enter,[k.lalt]).to(k.delete_forward)
 co.map(k.return_or_enter,[k.lcmd]).to(k.delete_or_backspace)
-co.map(k.delete_or_backspace,[k.lshift]).to(k.delete_forward) //mac default
+co.map(k.return_or_enter,[k.lcmd,k.lshift]).to(k.delete_forward)
+// co.map(k.delete_or_backspace,[k.lshift]).to(k.delete_forward) //mac default
 
 
 
-// 因為如果你用layer，它會阻檔其他的hold-cmd行為, 所以只能用直接對應的方式
 const lc = co.rule('Left Alt')
 lc.map(k.u, [k.lalt]).to(k.hyphen).desc('-')
 lc.map(k.i, [k.lalt]).to(k.equal_sign).desc('=')
