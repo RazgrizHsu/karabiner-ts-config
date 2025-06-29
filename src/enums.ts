@@ -84,7 +84,9 @@ export enum Key {
   left_gui = 'left_gui',
   right_gui = 'right_gui',
   left_alt = 'left_alt',
-  right_alt = 'right_alt'
+  right_alt = 'right_alt',
+
+  vk_none = 'vk_none', none = 'vk_none'
 }
 
 export enum Mouse {

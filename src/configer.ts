@@ -638,7 +638,7 @@ export class RuleBased extends IRule {
 	layers: Layer[] = []
 
 	//"to_if_alone": [{ "key_code": "caps_lock", "hold_down_milliseconds": 100 }]
-	onAlone: IOnAlone = {}
+	onAlone!: IOnAlone
 
 	constructor(bu: Config, k: Key, trigMods: IMods) {
 		super(bu)

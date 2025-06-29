@@ -11,53 +11,78 @@ co.device({product_id:24926,vendor_id:7504})
 co.map(k.caps_lock).to(k.f16)
 
 
-let ho = co.rule('hold keys: HomeRow')
-
-// 20250625: Currently cannot find a better approach
-// For combinations like shift+alt, each key needs to wait 167ms to be recognized as hold
-// If the timing is reduced, complex shortcuts trigger faster but typing 'asdffdsa' causes more misfires
-ho.setOnHold({ delayedActionMs:130, thresholdMs:180 })
-ho.map(k.a,[mod.any]).onHold(k.lshift).desc('lshift')
-ho.map(k.s,[mod.any]).onHold(k.lctrl).desc('lctrl')
-ho.map(k.d,[mod.any]).onHold(k.lalt).desc('lalt')
-
-ho.map(k.semicolon,[mod.any]).onHold(k.rshift).desc('rshift')
-ho.map(k.l,[mod.any]).onHold(k.rctrl).desc('rctrl')
-ho.map(k.k,[mod.any]).onHold(k.ralt).desc('ralt')
-
-// Using zx./ version allows independent shift key usage, but asdf keys are still more convenient
-// ho.map(k.z).onHold(k.lctrl).desc('z -> LCTRL')
-// ho.map(k.x).onHold(k.lalt).desc('x -> LALT')
-// ho.map(k.slash).onHold(k.rctrl).desc('/ -> RALT')
-// ho.map(k.period).onHold(k.ralt).desc('. -> RALT')
-
-
-// for fast
-// co.map(k.rcmd,[k.lalt]).to(k.escape)
-// co.map(k.spacebar,[k.lalt]).to(k.delete_or_backspace)
-// co.map(k.return_or_enter,[k.lalt]).to(k.delete_forward)
-co.map(k.return_or_enter,[k.lcmd]).to(k.delete_or_backspace)
-co.map(k.return_or_enter,[k.lcmd,k.lshift]).to(k.delete_forward)
-// co.map(k.delete_or_backspace,[k.lshift]).to(k.delete_forward) //mac default
 
 
 
+const mdAny = [mod.any]
+const mdLSC = [k.lshift, k.lctrl]
+const mdRSC = [k.rshift, k.rctrl]
 
-const lc = co.rule('Left Alt')
-let modLA = [k.lalt,mod.any]
-lc.map(k.u, modLA).to(k.hyphen).desc('-')
-lc.map(k.i, modLA).to(k.equal_sign).desc('=')
-lc.map(k.o, modLA).to(k.open_bracket).desc('[')
-lc.map(k.p, modLA).to(k.close_bracket).desc(']')
-lc.map(k.backslash, modLA).to(k.backslash, [k.lshift]).desc('|')
-lc.map(k.semicolon, modLA).to(k.semicolon, [k.lshift]).desc(':')
-lc.map(k.quote, modLA).to(k.quote, [k.lshift]).desc('"')
-lc.map(k.comma, modLA).to(k.comma, [k.lshift]).desc('<')
-lc.map(k.period, modLA).to(k.period, [k.lshift]).desc('>')
-lc.map(k.slash, modLA).to(k.slash, [k.lshift]).desc('?')
+// use zmk to setup f18 key
+const f18 = co.ruleBaseBy(k.f18).desc('f18').ifAlone(k.none)
+f18.map(k.spacebar,mdAny).to(k.delete_forward)
+f18.map(k.enter).to(k.delete_or_backspace)
 
-lc.map(k.n9, modLA).to(k.n9,[k.lshift]).desc('(')
-lc.map(k.n0, modLA).to(k.n0,[k.lshift]).desc(')')
+
+f18.map(k.k,mdAny).to(k.up_arrow).desc('Up')
+f18.map(k.j,mdAny).to(k.down_arrow).desc('Down')
+f18.map(k.h,mdAny).to(k.left_arrow).desc('Left')
+f18.map(k.l,mdAny).to(k.right_arrow).desc('Right')
+
+f18.map(k.k,mdLSC).to(k.page_up).desc('Up')
+f18.map(k.j,mdLSC).to(k.page_down).desc('Down')
+f18.map(k.h,mdLSC).to(k.home).desc('Left')
+f18.map(k.l,mdLSC).to(k.end).desc('Right')
+
+// make left hand can input all numbers
+f18.map(k.q,mdAny).to(k.n6).desc('6')
+f18.map(k.w,mdAny).to(k.n7).desc('7')
+f18.map(k.e,mdAny).to(k.n8).desc('8')
+f18.map(k.r,mdAny).to(k.n9).desc('9')
+f18.map(k.t,mdAny).to(k.n0).desc('0')
+
+
+// left and rigth trigger fn key
+const kin = [ k.n1, k.n2, k.n3, k.n4, k.n5, k.n6, k.n7, k.n8, k.n9, k.n0,  k.y,   k.u ]
+const kou = [ k.f1, k.f2, k.f3, k.f4, k.f5, k.f6, k.f7, k.f8, k.f9, k.f10, k.f11, k.f12 ]
+for (let i = 0; i < kin.length; i++) {
+	const inp = kin[i];
+	const out = kou[i];
+	const dsc = `${inp} -> ${out}`
+
+	f18.map(inp, mdLSC).to(out).desc(dsc)
+	f18.map(inp, mdRSC).to(out).desc(dsc)
+}
+
+f18.map(k.u, mdAny).to(k.hyphen).desc('-')
+f18.map(k.i, mdAny).to(k.equal_sign).desc('=')
+f18.map(k.o, mdAny).to(k.open_bracket).desc('[')
+f18.map(k.p, mdAny).to(k.close_bracket).desc(']')
+f18.map(k.backslash, mdAny).to(k.backslash, [k.lshift]).desc('|')
+f18.map(k.semicolon, mdAny).to(k.semicolon, [k.lshift]).desc(':')
+f18.map(k.quote, mdAny).to(k.quote, [k.lshift]).desc('"')
+f18.map(k.comma, mdAny).to(k.comma, [k.lshift]).desc('<')
+f18.map(k.period, mdAny).to(k.period, [k.lshift]).desc('>')
+f18.map(k.slash, mdAny).to(k.slash, [k.lshift]).desc('?')
+
+f18.map(k.n9, mdAny).to(k.n9,[k.lshift]).desc('(')
+f18.map(k.n0, mdAny).to(k.n0,[k.lshift]).desc(')')
+
+// const lc = co.rule('Left Alt')
+// let modLA = [k.lalt,mod.any]
+// lc.map(k.u, modLA).to(k.hyphen).desc('-')
+// lc.map(k.i, modLA).to(k.equal_sign).desc('=')
+// lc.map(k.o, modLA).to(k.open_bracket).desc('[')
+// lc.map(k.p, modLA).to(k.close_bracket).desc(']')
+// lc.map(k.backslash, modLA).to(k.backslash, [k.lshift]).desc('|')
+// lc.map(k.semicolon, modLA).to(k.semicolon, [k.lshift]).desc(':')
+// lc.map(k.quote, modLA).to(k.quote, [k.lshift]).desc('"')
+// lc.map(k.comma, modLA).to(k.comma, [k.lshift]).desc('<')
+// lc.map(k.period, modLA).to(k.period, [k.lshift]).desc('>')
+// lc.map(k.slash, modLA).to(k.slash, [k.lshift]).desc('?')
+//
+// lc.map(k.n9, modLA).to(k.n9,[k.lshift]).desc('(')
+// lc.map(k.n0, modLA).to(k.n0,[k.lshift]).desc(')')
 
 //------------------------------------------------------------------------
 // hyper key
@@ -70,10 +95,6 @@ bse.map(k.t).to(`open -a ghostty`).desc('ghostty').separate()
 bse.map(k.b).to(`open -a Firefox`).desc('Firefox').separate()
 
 // vim type motion
-// bse.map(k.k,[mod.any]).to(k.up_arrow,[mod.any]).desc('Up')
-// bse.map(k.j,[mod.any]).to(k.down_arrow,[mod.any]).desc('Down')
-// bse.map(k.h,[mod.any]).to(k.left_arrow,[mod.any]).desc('Left')
-// bse.map(k.l,[mod.any]).to(k.right_arrow,[mod.any]).desc('Right')
 bse.map(k.k,[mod.any]).to(k.up_arrow).desc('Up')
 bse.map(k.j,[mod.any]).to(k.down_arrow).desc('Down')
 bse.map(k.h,[mod.any]).to(k.left_arrow).desc('Left')
@@ -117,17 +138,6 @@ lwr.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc(
 lwr.map(k.l).to(`open -g 'rectangle://execute-action?name=larger-width'`).desc('Larger Width')
 lwr.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller-height'`).desc('Smaller Height')
 lwr.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc('Larger Height')
-
-// if you prefer raycast
-// sW.map(k.o).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/next-desktop').desc('Next Desktop')
-// sW.map(k.k).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/top-half').desc('Top Half')
-// sW.map(k.j).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/bottom-half').desc('Bottom Half')
-// sW.map(k.h).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/left-half').desc('Left Half')
-// sW.map(k.l).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/right-half').desc('Right Half')
-// sW.map(k.return_or_enter).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/maximize').desc('Maximize')
-// sW.map(k.hyphen).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/make-smaller').desc('Small')
-// sW.map(k.equal_sign).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/make-larger').desc('Large')
-// sW.map(k.u).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/top-left-sixth').desc('Top Left Six')
 
 // system
 const ls = bse.layer(k.s).desc('System Control').separate()
