@@ -7,9 +7,20 @@ co.global.show_in_menu_bar = true
 // sofle keyboard
 co.device({product_id:24926,vendor_id:7504})
 
-// for apple standard keyboard
 co.map(k.caps_lock).to(k.f16)
-
+// let dvcAir = co.device({ product_id:641, vendor_id:1452 })
+//
+// // for apple standard keyboard
+// dvcAir.map(k.caps_lock).to(k.f16)
+//
+// let hr = dvcAir.rule('Home Rows')
+// hr.setOnHold({ delayedActionMs:138, thresholdMs:180 })
+// hr.map(k.a).onHold(k.lshift)
+// hr.map(k.s).onHold(k.lctrl)
+// hr.map(k.d).onHold(k.lcmd)
+// hr.map(k.k).onHold(k.lalt)
+// hr.map(k.l).onHold(k.rctrl)
+// hr.map(k.semicolon).onHold(k.rshift)
 
 
 
