@@ -284,16 +284,16 @@ Once your Base Key is set up, you can create simple, direct shortcuts. These are
 
 ```typescript
 // Base Key + T opens Terminal
-hyp.map(k.t).to(`open -a 'Terminal'`).desc('Terminal').separate()
+hyp.map(k.t).to(`open -a 'Terminal'`).desc('Terminal')
 
 // Base Key + B opens your Browser
-hyp.map(k.b).to(`open -a 'Safari'`).desc('Browser').separate()
+hyp.map(k.b).to(`open -a 'Safari'`).desc('Browser')
 
 // Base Key + F opens Finder
-hyp.map(k.f).to(`open -a 'Finder'`).desc('Finder').separate()
+hyp.map(k.f).to(`open -a 'Finder'`).desc('Finder')
 
 // Base Key + Spacebar can trigger another shortcut
-hyp.map(k.spacebar).to(k.f1, [mod.left_command]).desc('Trigger CMD+F1').separate()
+hyp.map(k.spacebar).to(k.f1, [mod.left_command]).desc('Trigger CMD+F1')
 ```
 
 Sometimes, you'll need to use osascript to open applications or specific URLs, especially if the standard open -a command isn't sufficient.
@@ -325,7 +325,7 @@ Here's how to create a simple layer for launching applications.
 
 ```typescript
 // Create the layer: Base Key + O is the trigger for "Open Applications"
-const sO = hyp.layer(k.o).desc('Open Applications').separate()
+const sO = hyp.layer(k.o).desc('Open Applications')
 
 // Define the mappings within this layer:
 sO.map(k.m).to(`open -a 'Obsidian'`).desc('Open Obsidian')
@@ -343,7 +343,7 @@ In this example, we'll create a primary "Window Management" layer and then a nes
 
 ```typescript
 // 1. Create the parent layer for "Window Management" (Trigger: Base Key + W)
-const sW = hyp.layer(k.w).desc('Window Management').separate()
+const sW = hyp.layer(k.w).desc('Window Management')
 
 // Define top-level commands in the parent layer
 // Usage: Base Key + W, then O/J/K
@@ -352,7 +352,7 @@ sW.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small'
 sW.map(k.k).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 
 // 2. Create the nested layer for "Window Resize" (Trigger: Base Key + W + R)
-const sWR = sW.layer(k.r).desc('Window resize').separate()
+const sWR = sW.layer(k.r).desc('Window resize')
 
 // Define commands within the nested layer
 // Usage: Base Key + W + R, then H/L/J/K
@@ -556,7 +556,6 @@ key rollover limitations vary between different keyboard models, so please test 
 - `.setArgs(args)` - Set hold parameters for individual mapping
 - `.toOsaOpen(app, url)` - Open URL with AppleScript
 - `.desc(description)` - Add description to mapping
-- `.separate()` - Create independent rule (use after mapping)
 
 ### DeviceBuilder
 
@@ -569,7 +568,6 @@ key rollover limitations vary between different keyboard models, so please test 
 
 - `map(key, modifiers?)` - Create key mapping within layer
 - `.desc(description)` - Add description to layer
-- `.separate()` - Create independent rule
 - All mapping methods available (`.to()`, `.toOsaOpen()`, etc.)
 
 

@@ -13,11 +13,9 @@ const bse = co.ruleBaseBy(k.caps_lock)
 	// optional, if you don't call this method, the key will output escape when pressed alone
 	.ifAlone(k.caps_lock)
 
-// if you don't call the separate() method, those rules will merged into hyp
-bse.map(k.f).to(`open -a 'Finder'`).desc('Finder').separate()
-bse.map(k.t).to(`open -a WezTerm`).desc('WezTerm').separate()
-bse.map(k.b).to(`open -a Firefox`).desc('Firefox').separate()
-
+bse.map(k.f).to(`open -a 'Finder'`).desc('Finder')
+bse.map(k.t).to(`open -a WezTerm`).desc('WezTerm')
+bse.map(k.b).to(`open -a Firefox`).desc('Firefox')
 // vim type motion
 bse.map(k.k).to(k.up_arrow).desc('Up')
 bse.map(k.j).to(k.down_arrow).desc('Down')
@@ -25,14 +23,12 @@ bse.map(k.h).to(k.left_arrow).desc('Left')
 bse.map(k.l).to(k.right_arrow).desc('Right')
 
 // App Open
-const la = bse.layer(k.a).desc('Application').separate()
-la.map(k.s).to(`open -a spotify`).desc('spotify').separate()
-la.map(k.o).to(`open -a Obsidian`).desc('Obsidian').separate()
-la.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2').separate()
+const la = bse.layer(k.a).desc('Application')
+la.map(k.s).to(`open -a spotify`).desc('spotify')
+la.map(k.o).to(`open -a Obsidian`).desc('Obsidian')
+la.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2')
 
-
-const lw = bse.layer(k.w).desc('Window Management').separate()
-
+const lw = bse.layer(k.w).desc('Window Management')
 // if you use rectangle
 lw.map(k.d).to(`open -g 'rectangle://execute-action?name=next-display'`).desc('Next Display')
 lw.map(k.k).to(`open -g 'rectangle://execute-action?name=top-half'`).desc('Top Half')
@@ -47,10 +43,9 @@ lw.map(k.hyphen).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('S
 lw.map(k.equal_sign).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 
 // Next Window: you need to set the same shortcut in macOS Settings > Keyboard > Shortcuts, under 'Move focus to next window'.
-lw.map(k.n).to(k.grave_accent_and_tilde, [mod.left_control, mod.left_shift, mod.left_option, mod.left_command]).desc('Focus Next Window').separate()
-
+lw.map(k.n).to(k.grave_accent_and_tilde, [mod.left_control, mod.left_shift, mod.left_option, mod.left_command]).desc('Focus Next Window')
 // sub layer for resize
-const lwr = lw.layer(k.r).desc('Window resize').separate()
+const lwr = lw.layer(k.r).desc('Window resize')
 lwr.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc('Smaller Width')
 lwr.map(k.l).to(`open -g 'rectangle://execute-action?name=larger-width'`).desc('Larger Width')
 lwr.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller-height'`).desc('Smaller Height')
@@ -68,7 +63,7 @@ lwr.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc(
 // sW.map(k.u).toOsaOpen('Raycast', 'raycast://extensions/raycast/window-management/top-left-sixth').desc('Top Left Six')
 
 // system
-const ls = bse.layer(k.s).desc('System Control').separate()
+const ls = bse.layer(k.s).desc('System Control')
 ls.map(k.u).to(k.volume_increment).desc('Volume Up')
 ls.map(k.d).to(k.volume_decrement).desc('Volume Down')
 
@@ -77,7 +72,7 @@ ls.map(k.b).to(`CURRENT_STATE=$(defaults read com.apple.ComfortSounds "comfortSo
 
 
 // media control
-const lm = bse.layer(k.m).desc('Media Control').separate()
+const lm = bse.layer(k.m).desc('Media Control')
 lm.map(k.p).to(k.play_or_pause).desc('Play/Pause')
 lm.map(k.n).to(k.fastforward).desc('Next Track')
 lm.map(k.b).to(k.rewind).desc('Previous Track')

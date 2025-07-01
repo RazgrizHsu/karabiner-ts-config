@@ -7,10 +7,8 @@ co.global.show_in_menu_bar = true
 const hyp = co.ruleBaseBy(k.caps_lock)
 	.desc('🌟 Hyper')
 
-const sW = hyp.layer(k.w).desc('Window Management').separate()
-
-const sWY = sW.layer(k.y).desc('Window resize y').separate()
-
+const sW = hyp.layer(k.w).desc('Window Management')
+const sWY = sW.layer(k.y).desc('Window resize y')
 // IMPORTANT: This configuration does not work
 // because pressing `s+w+y` along with `-` or `=` exceeds the key rollover limitations of your keyboard.
 // As a result, the keyboard’s hardware matrix does not register the `-` or `=` keys in this combination,

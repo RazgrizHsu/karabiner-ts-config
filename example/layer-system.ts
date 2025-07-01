@@ -20,8 +20,7 @@ const hyper = co.ruleBaseBy(k.f16).desc('Hyper Layer System')
     .ifAlone(k.escape)  // F16 alone outputs escape
 
 // Layer 1: Application Launcher (hyper + o)
-const appLayer = hyper.layer(k.o).desc('Application Launcher').separate()
-
+const appLayer = hyper.layer(k.o).desc('Application Launcher')
 // Common applications
 appLayer.map(k.f).to(`open -a 'Finder'`).desc('Finder')
 appLayer.map(k.b).to(`open -a 'Firefox'`).desc('Firefox')
@@ -38,8 +37,7 @@ appLayer.map(k.g).to(`open -a 'GitHub Desktop'`).desc('GitHub Desktop')
 appLayer.map(k.i).to(`open -a 'IntelliJ IDEA'`).desc('IntelliJ IDEA')
 
 // Layer 2: Window Management (hyper + w)
-const windowLayer = hyper.layer(k.w).desc('Window Management').separate()
-
+const windowLayer = hyper.layer(k.w).desc('Window Management')
 // Basic window positioning
 windowLayer.map(k.h).to(`open -g 'rectangle://execute-action?name=left-half'`).desc('Left Half')
 windowLayer.map(k.l).to(`open -g 'rectangle://execute-action?name=right-half'`).desc('Right Half')
@@ -58,7 +56,7 @@ windowLayer.map(k.spacebar).to(`open -g 'rectangle://execute-action?name=restore
 windowLayer.map(k.d).to(`open -g 'rectangle://execute-action?name=next-display'`).desc('Next Display')
 
 // Sub-layer: Window Resizing (hyper + w + r)
-const resizeLayer = windowLayer.layer(k.r).desc('Window Resize').separate()
+const resizeLayer = windowLayer.layer(k.r).desc('Window Resize')
 resizeLayer.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc('Smaller Width')
 resizeLayer.map(k.l).to(`open -g 'rectangle://execute-action?name=larger-width'`).desc('Larger Width')
 resizeLayer.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller-height'`).desc('Smaller Height')
@@ -67,8 +65,7 @@ resizeLayer.map(k.i).to(`open -g 'rectangle://execute-action?name=smaller'`).des
 resizeLayer.map(k.o).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Larger Overall')
 
 // Layer 3: System Control (hyper + s)
-const systemLayer = hyper.layer(k.s).desc('System Control').separate()
-
+const systemLayer = hyper.layer(k.s).desc('System Control')
 // Media controls
 systemLayer.map(k.spacebar).to(k.play_or_pause).desc('Play/Pause')
 systemLayer.map(k.comma).to(k.rewind).desc('Previous Track')
@@ -90,8 +87,7 @@ systemLayer.map(k.l).to(`pmset sleepnow`).desc('Sleep System')
 systemLayer.map(k.x).to(`/System/Library/CoreServices/Menu\\ Extras/User.menu/Contents/Resources/CGSession -suspend`).desc('Lock Screen')
 
 // Layer 4: Navigation and Editing (hyper + n)
-const navLayer = hyper.layer(k.n).desc('Navigation & Editing').separate()
-
+const navLayer = hyper.layer(k.n).desc('Navigation & Editing')
 // Vim-style navigation with modifiers
 navLayer.map(k.h).to(k.left_arrow).desc('Left')
 navLayer.map(k.j).to(k.down_arrow).desc('Down')
@@ -119,8 +115,7 @@ navLayer.map(k.k, [k.lshift]).to(k.up_arrow, [k.lshift]).desc('Select Up')
 navLayer.map(k.l, [k.lshift]).to(k.right_arrow, [k.lshift]).desc('Select Right')
 
 // Layer 5: Development Tools (hyper + v)
-const devLayer = hyper.layer(k.v).desc('Development Tools').separate()
-
+const devLayer = hyper.layer(k.v).desc('Development Tools')
 // Git commands (using terminal shortcuts)
 devLayer.map(k.s).to(k.s, [k.lcmd]).desc('Save (Cmd+S)')
 devLayer.map(k.z).to(k.z, [k.lcmd]).desc('Undo (Cmd+Z)')
@@ -141,8 +136,7 @@ devLayer.map(k.c).to(k.c, [k.lctrl]).desc('Interrupt (Ctrl+C)')
 devLayer.map(k.x).to(k.x, [k.lctrl]).desc('Kill Line (Ctrl+X)')
 
 // Layer 6: Number Pad (hyper + m)
-const numLayer = hyper.layer(k.m).desc('Number Pad').separate()
-
+const numLayer = hyper.layer(k.m).desc('Number Pad')
 // Number grid (like a numpad)
 numLayer.map(k.u).to(k.n7).desc('7')
 numLayer.map(k.i).to(k.n8).desc('8')

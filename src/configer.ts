@@ -11,10 +11,10 @@ import { icon } from './icon'
 export const DEBUG = false
 
 enum DvcType {
-    deviceIf = 'device_if',
-    deviceUnless = 'device_unless',
-    deviceExistsIf = 'device_exists_if',
-    deviceExistsUnless = 'device_exists_unless'
+    If = 'device_if',
+    Unless = 'device_unless',
+    ExistsIf = 'device_exists_if',
+    ExistsUnless = 'device_exists_unless'
 }
 
 type IOnAlone = { key?:Key, holdMs?:number }
@@ -38,22 +38,22 @@ namespace cfg {
 
 		const from: any = { key_code: key as string }
 
-		const mandatoryMods: string[] = []
+		const modMay: string[] = []
 		let hasAny = false
 
 		mods.forEach(mod => {
 			if (mod.toString() === 'any') {
 				hasAny = true
 			} else {
-				mandatoryMods.push(mod.toString())
+				modMay.push(mod.toString())
 			}
 		})
 
-		if (hasAny || mandatoryMods.length > 0) {
+		if (hasAny || modMay.length > 0) {
 			from.modifiers = {}
 
 			if (hasAny) from.modifiers.optional = ['any']
-			if (mandatoryMods.length > 0) from.modifiers.mandatory = mandatoryMods
+			if (modMay.length > 0) from.modifiers.mandatory = modMay
 		}
 
 		return from;
@@ -74,6 +74,18 @@ namespace cfg {
 		const evt: IToEvent = { key_code: dst as Key }
 		if (dstMods?.length) evt.modifiers = dstMods.map(m => m.toString())
 		return evt
+	}
+
+	const formatDeviceInfo = (device?: Device): string => {
+		if (!device) return ''
+		return `[VID:${device.ids.vendor_id},PID:${device.ids.product_id}] `
+	}
+
+	const formatKeyMappingSummary = (maps: Array<{key: Key, desc: string}>): string => {
+		if (maps.length === 0) return ''
+		const keyList = maps.slice(0, 3).map(m => icon(m.key)).join('')
+		const moreCount = maps.length > 3 ? `+${maps.length - 3}` : ''
+		return ` - key[ ${keyList}${moreCount} ]`
 	}
 
 	const mkConds = (baseVnm?: string, layVnms: string[] = [], excLays: string[] = [], deviceConds: ICondDevice[] = []) => {
@@ -153,12 +165,7 @@ namespace cfg {
 
 		}
 
-		// Add device conditions if any
-		if (defaultDeviceConds.length > 0) {
-			mr.conditions = defaultDeviceConds
-		}
-
-		// Add parameters if any
+		if (defaultDeviceConds.length > 0) mr.conditions = defaultDeviceConds
 
 		if (DEBUG) console.info(`hold: ${JSON.stringify(mr)}`)
 
@@ -227,11 +234,11 @@ namespace cfg {
 		return mrs
 	}
 
-	const procLayerMr = (lay: Layer): IManipulator[] => {
+	const procLayerMr = (lay: Layer, deviceConds: ICondDevice[] = []): IManipulator[] => {
 		const mrs: IManipulator[] = []
 
 		const parentConds = lay.parent ? getLayConds(lay.parent) : []
-		const conds = mkConds(lay.baseVar, parentConds)
+		const conds = mkConds(lay.baseVar, parentConds, [], deviceConds)
 
 		mrs.push({
 			description: `Toggle layer ${lay.key}`,
@@ -239,10 +246,10 @@ namespace cfg {
 			from: { key_code: lay.key, modifiers: { optional: [Mod.any] } },
 			to: [{ set_variable: { name: lay.vName, value: 1 } }],
 			to_after_key_up: [{ set_variable: { name: lay.vName, value: 0 } }],
-			conditions: conds
+			...(conds.length > 0 && { conditions: conds })
 		})
 
-		const layKeyMaps = lay.maps.filter(m => !m.separated).map(m => ({
+		const layKeyMaps = lay.maps.map(m => ({
 			key: m.key,
 			mods: m.mods,
 			keys: m.keys,
@@ -252,85 +259,12 @@ namespace cfg {
 		const lays = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
 		const layConsNow = getLayConds(lay)
 		const exclLays = lays.filter(ln => !layConsNow.includes(ln))
-		mrs.push(...procKeyMaps(layKeyMaps, lay.baseVar, exclLays))
+		mrs.push(...procKeyMaps(layKeyMaps, lay.baseVar, exclLays, deviceConds))
 
 		return mrs
 	}
 
-	const proSepMaps = (maps: BasedKeyMap[], vnm: string): IKaraRule[] => {
-		const rus: IKaraRule[] = []
-		for (const map of maps.filter(m => m.separated)) {
-			for (const mk of map.keys) {
-				const dsts = Array.isArray(mk.key) ? mk.key : [mk.key]
-				for (const dst of dsts) {
-					const conds = [{ type: 'variable_if', name: vnm, value: 1 }]
-					const toE = fmtDest(dst, mk.mods)
-					const mr = mkMr(map.dscFull, map.key, map.mods, toE, conds)
-					rus.push({ description: map.dscFull, manipulators: [mr] })
-				}
-			}
-		}
-		return rus
-	}
 
-	const procSepLayers = (lays: Layer[]): IKaraRule[] => {
-		const rus: IKaraRule[] = []
-		for (const lay of lays.filter(l => l.separated)) {
-			const mrs: IManipulator[] = []
-
-			const parentConds = lay.parent ? getLayConds(lay.parent) : []
-			const conds = mkConds(lay.baseVar, parentConds)
-
-			mrs.push({
-				description: `Toggle layer ${lay.key}`,
-				type: 'basic',
-				from: {
-					key_code: lay.key,
-					modifiers: { optional: [Mod.any] }
-				},
-				to: [{ set_variable: { name: lay.vName, value: 1 } }],
-				to_after_key_up: [{ set_variable: { name: lay.vName, value: 0 } }],
-				conditions: conds
-			})
-
-			const nonSepMaps = lay.maps.filter(m => !m.separated)
-			for (const map of nonSepMaps) {
-				const layKeyMaps = [{ key: map.key, mods: map.mods, keys: map.keys, desc: map.dscFul, layer: lay }]
-				const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
-				const currentLayerConds = getLayConds(lay)
-				const excludeLayers = allLayers.filter(ln => !currentLayerConds.includes(ln))
-				mrs.push(...procKeyMaps(layKeyMaps, lay.baseVar, excludeLayers))
-			}
-
-			let desc = lay.dscFul
-			if (nonSepMaps.length > 0) {
-				desc += ` ( ${nonSepMaps.length} )\n`
-				for (const km of nonSepMaps) {
-					const shortDesc = km.dscFul.replace(lay.dscFul + ' - ', '')
-					desc += ` + [ ${icon(km.key)} ] : ${shortDesc}\n`
-				}
-				desc = desc.trimEnd()
-			}
-
-			rus.push({ description: desc, manipulators: mrs })
-
-			for (const map of lay.maps.filter(m => m.separated)) {
-				for (const mk of map.keys) {
-					const dsts = Array.isArray(mk.key) ? mk.key : [mk.key]
-					for (const dst of dsts) {
-						const layerConds = getLayConds(lay)
-						const allLayers = lay.rule.bu.ruleBsds.flatMap(rb => rb.layers).map(l => l.vName)
-						const excludeLayers = allLayers.filter(ln => !layerConds.includes(ln))
-						const conds = mkConds(undefined, layerConds, excludeLayers)
-						const toEvent = fmtDest(dst, mk.mods)
-						const mr = mkMr(map.dscFul, map.key, map.mods, toEvent, conds)
-						rus.push({ description: map.dscFul, manipulators: [mr] })
-					}
-				}
-			}
-		}
-		return rus
-	}
 
 	const procSimpleMods = (simpleMaps: SimpleKeyMap[]): ISimple[] => {
 		const smods: ISimple[] = []
@@ -482,6 +416,19 @@ namespace cfg {
 				desc = `${rub.dsc} [ ${icon(rub.baseKey)} ] → [ ${modsEmoji} ]`
 			}
 
+			const dvc = formatDeviceInfo(rub.dvc)
+			const base = ` - based[ ${icon(rub.baseKey)} ]`
+			const keyMaps = rub.maps.map(m => ({key: m.key, desc: m.dsc, keys:m.keys || ''}))
+
+			if (dvc || keyMaps.length > 0) {
+				const mapDetails = keyMaps.map(m => {
+					let srcK = icon(m.key)
+					let dstK = m.keys.length > 0 ? icon(m.keys[0].key) : `??`
+					return `  + [ ${srcK} ] = ${dstK} ${m.desc ? `(${m.desc})` : ''}`
+				}).join('\n')
+				desc = `${dvc}${desc}${base}\n${mapDetails}`
+			}
+
 			const rubDeviceConds = rub.dvc ? [deviceToCondition(rub.dvc)] : []
 
 			const rule: IKaraRule = {
@@ -489,7 +436,7 @@ namespace cfg {
 				manipulators: procTrigMrs(rub, rubDeviceConds)
 			}
 
-			const basedKeyMaps = rub.maps.filter(m => !m.separated).map(m => ({
+			const basedKeyMaps = rub.maps.map(m => ({
 				key: m.key,
 				mods: m.mods,
 				keys: m.keys,
@@ -497,30 +444,21 @@ namespace cfg {
 			}))
 			rule.manipulators.push(...procKeyMaps(basedKeyMaps, rub.baseVar, [], rubDeviceConds))
 
-			for (const lay of rub.layers.filter(l => !l.separated)) rule.manipulators.push(...procLayerMr(lay))
+			for (const lay of rub.layers) rule.manipulators.push(...procLayerMr(lay, rubDeviceConds))
 
 			rus.push(rule)
-			rus.push(...proSepMaps(rub.maps, rub.baseVar))
-			rus.push(...procSepLayers(rub.layers))
 		}
 
 		for (const ru of bu.rules) {
 			const mrs: IManipulator[] = []
-
-			// Process regular maps and held down maps separately
 			const regularMaps: typeof ru.maps = []
 			const heldDownMaps: typeof ru.maps = []
 
 			for (const map of ru.maps) {
-				if (map.holdInfo) {
-					heldDownMaps.push(map)
-				}
-				else {
-					regularMaps.push(map)
-				}
+				if (map.holdInfo) heldDownMaps.push(map)
+				else regularMaps.push(map)
 			}
 
-			// Process regular maps
 			const ruKeyMaps = regularMaps.map(m => ({
 				key: m.key,
 				mods: m.mods,
@@ -530,27 +468,31 @@ namespace cfg {
 			const ruDeviceConds = ru.dvc ? [deviceToCondition(ru.dvc)] : []
 			mrs.push(...procKeyMaps(ruKeyMaps, undefined, [], ruDeviceConds))
 
-			// Process held down maps
 			for (const heldMap of heldDownMaps) {
 				let m = procHeldDownMr(heldMap, ruDeviceConds)
 				if( m ) mrs.push(m)
 			}
 
 			let desc = ru.dscFul
-			if (ru.maps.length === 1) {
-				// Single mapping: use the detailed description from the mapping
-				desc = ru.maps[0].dscFul
-			} else if (ru.maps.length > 1) {
-				// Multiple mappings: show summary with individual mappings
-				const mods = ru.maps.length > 0 ? ru.maps[0].mods.filter(mod => ru.maps.every(m => m.mods.includes(mod))) : []
+			const dvc = formatDeviceInfo(ru.dvc)
 
+			if (ru.maps.length === 1) {
+				desc = ru.maps[0].dscFul
+				if (dvc) desc = `${dvc}${desc}`
+			} else if (ru.maps.length > 1) {
+				const mods = ru.maps.length > 0 ? ru.maps[0].mods.filter(mod => ru.maps.every(m => m.mods.includes(mod))) : []
 				const modStr = mods.length > 0 ? mods.map(icon).join('') : ru.maps.length
-				desc += ` [ ${modStr} ] (${ru.maps.length})\n`
+				const keyMaps = ru.maps.map(m => ({key: m.key, desc: m.dsc || ''}))
+				const keySummary = formatKeyMappingSummary(keyMaps)
+
+				desc = `${dvc}${desc} [ ${modStr} ] (${ru.maps.length})${keySummary}\n`
 				for (const m of ru.maps) {
 					const shortDesc = m.dscFul.replace(ru.dsc + ' + ', '').replace('-> ', '')
 					desc += `  + [ ${icon(m.key)} ] : ${shortDesc}\n`
 				}
 				desc = desc.trimEnd()
+			} else if (dvc) {
+				desc = `${dvc}${desc}`
 			}
 
 			rus.push({ description: desc, manipulators: mrs })
@@ -577,7 +519,7 @@ namespace cfg {
 			}
 		}
 
-		// Process SimpleKeyMap (simple_modifications only, no device conditions supported)
+
 		const simpleMods = procSimpleMods(bu.simples)
 
 		return {
@@ -642,9 +584,9 @@ export class Config {
 	}
 
 	rule(desc: string): Rule {
-		const ruleBuilder = new Rule(this, desc)
-		this.rules.push(ruleBuilder)
-		return ruleBuilder
+		const ru = new Rule(this, desc)
+		this.rules.push(ru)
+		return ru
 	}
 
 	map(key: Key, mods: IMods = []): SimpleKeyMap {
@@ -660,12 +602,12 @@ export class Config {
 	}
 
 	device(idf: IDeviceIds, ignore = false): Device {
-		const deviceIdentifiers = {
+		const ids = {
 			...idf,
 			...(idf.is_keyboard === undefined && { is_keyboard: true }),
 			...(idf.is_pointing_device === undefined && { is_pointing_device: true })
 		}
-		this.devices.push({ identifiers: deviceIdentifiers, ignore })
+		this.devices.push({ identifiers: ids, ignore })
 		return new Device(this, idf)
 	}
 
@@ -715,25 +657,25 @@ abstract class DeviceAble extends IDesc {
 	dvc?: Device
 
 	deviceIf(device: Device): this {
-		device.type = DvcType.deviceIf
+		device.type = DvcType.If
 		this.dvc = device
 		return this
 	}
 
 	deviceUnless(device: Device): this {
-		device.type = DvcType.deviceUnless
+		device.type = DvcType.Unless
 		this.dvc = device
 		return this
 	}
 
 	deviceExistsIf(device: Device): this {
-		device.type = DvcType.deviceExistsIf
+		device.type = DvcType.ExistsIf
 		this.dvc = device
 		return this
 	}
 
 	deviceExistsUnless(device: Device): this {
-		device.type = DvcType.deviceExistsUnless
+		device.type = DvcType.ExistsUnless
 		this.dvc = device
 		return this
 	}
@@ -829,7 +771,6 @@ export class Layer extends IDesc {
 	mods: IMods = []
 	rule: RuleBased
 	parent?: Layer
-	separated: boolean = false
 	maps: LayerKeyMap[] = []
 
 	constructor(rule: RuleBased, key: Key, parent?: Layer) {
@@ -845,10 +786,6 @@ export class Layer extends IDesc {
 		return `${parentDesc} + [ ${this.key} ] ： ${this.dsc}`
 	}
 
-	separate(): Layer {
-		this.separated = true
-		return this
-	}
 
 	get vName(): string {
 		if (!this.parent) return `lay_${this.rule.baseVar}_${this.key}`
@@ -927,7 +864,6 @@ export class SimpleKeyMap{
 
 export class BasedKeyMap extends IMap {
 	rule: RuleBased
-	separated: boolean = false
 
 
 	constructor(rule: RuleBased, k: Key, mods: IMods = [], bu: Config) {
@@ -939,25 +875,16 @@ export class BasedKeyMap extends IMap {
 		return `${this.rule.dsc} + [ ${this.key} ] ： ${this.dsc}`
 	}
 
-	separate(): BasedKeyMap {
-		this.separated = true
-		return this
-	}
 }
 
 export class LayerKeyMap extends IMap {
 	layer: Layer
-	separated: boolean = false
 
 	constructor(layer: Layer, k: Key, mods: IMods) {
 		super(k, mods)
 		this.layer = layer
 	}
 
-	separate(): LayerKeyMap {
-		this.separated = true
-		return this
-	}
 }
 
 type IHoldArgs = 	{
@@ -1023,7 +950,6 @@ export class RuleKeyMap extends IMap {
 		const modStr = this.mods.length > 0 ? this.mods.map(icon).join('') : ''
 		const keyIcon = icon(this.key)
 
-		// Generate description based on available information
 		let desc = this.dsc
 		if (!desc && this.keys.length > 0) {
 			desc = this.keys.map(k => {
@@ -1048,7 +974,7 @@ export class RuleKeyMap extends IMap {
 }
 
 export class Device extends IDesc {
-	type: DvcType = DvcType.deviceIf
+	type: DvcType = DvcType.If
 	cfg: Config
 	ids: IDeviceIds
 
@@ -1069,7 +995,7 @@ export class Device extends IDesc {
 
 	rule(desc: string): Rule {
 		const rule = new Rule(this.cfg, desc)
-		this.type = DvcType.deviceIf
+		this.type = DvcType.If
 		rule.dvc = this
 		this.cfg.rules.push(rule)
 		return rule
@@ -1083,7 +1009,7 @@ export class Device extends IDesc {
 
 	ruleBaseBy(key: Key, mods: IMods = []): RuleBased {
 		const rule = new RuleBased(this.cfg, key, mods)
-		this.type = DvcType.deviceIf
+		this.type = DvcType.If
 		rule.dvc = this
 		this.cfg.ruleBsds.push(rule)
 		return rule

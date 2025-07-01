@@ -40,7 +40,7 @@ setHyperLv( sofle, k.f16, '🌟hyper caps')
 function setHomeRowMods(src) {
 
 	let hr = src.rule('Home Rows')
-	hr.setOnHold({ delayedActionMs:138, thresholdMs:160 })
+	hr.setOnHold({ delayedActionMs:150, thresholdMs:180 })
 	hr.map(k.caps_lock,mdAny).to(k.escape).onHold(k.f16)
 	hr.map(k.a,mdAny).onHold(k.lshift)
 	hr.map(k.s,mdAny).onHold(k.lctrl)
@@ -119,31 +119,29 @@ function setHyperLv( src, trgK, desc ){
 	const bse = src.ruleBaseBy(trgK) .desc(desc)
 		.ifAlone(k.escape)
 
-	bse.map(k.f).to(`open -a 'Finder'`).desc('Finder').separate()
-	bse.map(k.t).to(`open -a ghostty`).desc('ghostty').separate()
-	bse.map(k.b).to(`open -a Firefox`).desc('Firefox').separate()
-
+	bse.map(k.f).to(`open -a 'Finder'`).desc('Finder')
+	bse.map(k.t).to(`open -a ghostty`).desc('ghostty')
+	bse.map(k.b).to(`open -a Firefox`).desc('Firefox')
 	// vim type motion
 	bse.map(k.k,[mod.any]).to(k.up_arrow).desc('Up')
 	bse.map(k.j,[mod.any]).to(k.down_arrow).desc('Down')
 	bse.map(k.h,[mod.any]).to(k.left_arrow).desc('Left')
 	bse.map(k.l,[mod.any]).to(k.right_arrow).desc('Right')
 
-	const la = bse.layer(k.a).desc('sim shift').separate()
+	const la = bse.layer(k.a).desc('sim shift')
 	la.map(k.k).to(k.up_arrow,[k.lshift])
 	la.map(k.j).to(k.down_arrow,[k.lshift])
 	la.map(k.h).to(k.left_arrow,[k.lshift])
 	la.map(k.l).to(k.right_arrow,[k.lshift])
 
 	// App Open
-	const lo = bse.layer(k.o).desc('Open App').separate()
-	lo.map(k.s).to(`open -a spotify`).desc('spotify').separate()
-	lo.map(k.m).to(`open -a Obsidian`).desc('Obsidian').separate()
-	lo.map(k.l).to(`open -a Line`).desc('Line').separate()
-	lo.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2').separate()
+	const lo = bse.layer(k.o).desc('Open App')
+	lo.map(k.s).to(`open -a spotify`).desc('spotify')
+	lo.map(k.m).to(`open -a Obsidian`).desc('Obsidian')
+	lo.map(k.l).to(`open -a Line`).desc('Line')
+	lo.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`).desc('JD2')
 
-
-	const lw = bse.layer(k.w).desc('Window Management').separate()
+	const lw = bse.layer(k.w).desc('Window Management')
 	lw.map(k.d).to(`open -g 'rectangle://execute-action?name=next-display'`).desc('Next Display')
 	lw.map(k.k).to(`open -g 'rectangle://execute-action?name=top-half'`).desc('Top Half')
 	lw.map(k.j).to(`open -g 'rectangle://execute-action?name=bottom-half'`).desc('Bottom Half')
@@ -157,10 +155,9 @@ function setHyperLv( src, trgK, desc ){
 	lw.map(k.i).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 
 	// macOS next window
-	lw.map(k.n).to(k.grave_accent_and_tilde, [k.lctrl, k.lshift, k.lalt, k.lcmd]).desc('Focus Next Window').separate()
-
+	lw.map(k.n).to(k.grave_accent_and_tilde, [k.lctrl, k.lshift, k.lalt, k.lcmd]).desc('Focus Next Window')
 	// sub layer for resize
-	const lwr = lw.layer(k.r).desc('Window resize').separate()
+	const lwr = lw.layer(k.r).desc('Window resize')
 	lwr.map(k.i).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
 	lwr.map(k.u).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
 	lwr.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc('Smaller Width')
@@ -169,7 +166,7 @@ function setHyperLv( src, trgK, desc ){
 	lwr.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc('Larger Height')
 
 	// system
-	const ls = bse.layer(k.s).desc('System Control').separate()
+	const ls = bse.layer(k.s).desc('System Control')
 	ls.map(k.i).to(k.volume_increment).desc('Volume Up')
 	ls.map(k.u).to(k.volume_decrement).desc('Volume Down')
 	ls.map(k.spacebar).to(k.play_or_pause).desc('Play/Paused')
@@ -182,7 +179,7 @@ function setHyperLv( src, trgK, desc ){
 
 
 	// raycast
-	const lr = bse.layer(k.r).desc('Raycast Extensions').separate()
+	const lr = bse.layer(k.r).desc('Raycast Extensions')
 	lr.map(k.n).to(`open raycast://extensions/raycast/raycast-notes/raycast-notes`).desc('Notes')
 	lr.map(k.e).to(`open raycast://extensions/raycast/emoji-symbols/search-emoji-symbols`).desc('Emoji Search')
 	lr.map(k.h).to(`open raycast://extensions/raycast/clipboard-history/clipboard-history`).desc('Clipboard History')
