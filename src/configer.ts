@@ -88,6 +88,30 @@ namespace cfg {
 		return ` - key[ ${keyList}${moreCount} ]`
 	}
 
+	const formatLayerDetails = (layers: Layer[], allLayers: Layer[], indent = ''): string => {
+		if (layers.length === 0) return ''
+
+		let result = ''
+		for (const layer of layers) {
+			const layerTitle = `${indent}------ + [ ${icon(layer.key)} ] : ${layer.dsc || 'Layer'} --------`
+			result += `\n${layerTitle}\n`
+
+			for (const map of layer.maps) {
+				const srcK = icon(map.key)
+				const dstK = map.keys.length > 0 ? icon(map.keys[0].key) : '??'
+				const desc = map.dsc ? ` (${map.dsc})` : ''
+				result += `${indent}  + [ ${srcK} ] = ${dstK}${desc}\n`
+			}
+
+			const subLayers = allLayers.filter(l => l.parent === layer)
+			if (subLayers.length > 0) {
+				result += formatLayerDetails(subLayers, allLayers, indent + '  ')
+			}
+		}
+
+		return result
+	}
+
 	const mkConds = (baseVnm?: string, layVnms: string[] = [], excLays: string[] = [], deviceConds: ICondDevice[] = []) => {
 		const conds: any[] = []
 		if (baseVnm) conds.push({ type: 'variable_if', name: baseVnm, value: 1 })
@@ -420,13 +444,19 @@ namespace cfg {
 			const base = ` - based[ ${icon(rub.baseKey)} ]`
 			const keyMaps = rub.maps.map(m => ({key: m.key, desc: m.dsc, keys:m.keys || ''}))
 
-			if (dvc || keyMaps.length > 0) {
+			if (dvc || keyMaps.length > 0 || rub.layers.length > 0) {
 				const mapDetails = keyMaps.map(m => {
 					let srcK = icon(m.key)
 					let dstK = m.keys.length > 0 ? icon(m.keys[0].key) : `??`
 					return `  + [ ${srcK} ] = ${dstK} ${m.desc ? `(${m.desc})` : ''}`
 				}).join('\n')
-				desc = `${dvc}${desc}${base}\n${mapDetails}`
+
+				const topLevLays = rub.layers.filter(l => !l.parent)
+				const layDetails = formatLayerDetails(topLevLays, rub.layers)
+
+				desc = `${dvc}${desc}${base}`
+				if (mapDetails) desc += `\n${mapDetails}`
+				if (layDetails) desc += layDetails
 			}
 
 			const rubDeviceConds = rub.dvc ? [deviceToCondition(rub.dvc)] : []
