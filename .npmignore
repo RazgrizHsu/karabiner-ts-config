@@ -1,4 +1,4 @@
-doc/
+@docs/
 example/
 src/
 tsconfig.json

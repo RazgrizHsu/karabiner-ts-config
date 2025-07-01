@@ -1,6 +1,6 @@
 {
   "name": "karabiner-ts-config",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "TypeScript Builder for Karabiner Elements configuration",
   "author": {
     "name": "RazgrizHsu",
