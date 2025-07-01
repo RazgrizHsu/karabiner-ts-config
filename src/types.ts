@@ -6,15 +6,21 @@ export interface IKaraCfgGlobal {
     show_in_menu_bar: boolean
 }
 
-export interface IDeviceIdentifiers {
+export interface IDeviceIds {
 	is_keyboard?: boolean
 	is_pointing_device?: boolean
+	is_game_pad?: boolean
+	is_consumer?: boolean
+	is_touch_bar?: boolean
+	is_built_in_keyboard?: boolean
 	product_id?: number
 	vendor_id?: number
+	device_address?: string
+	location_id?: number
 }
 
 export interface IDevice {
-	identifiers: IDeviceIdentifiers
+	identifiers: IDeviceIds
 	ignore?: boolean
 }
 
@@ -54,7 +60,7 @@ export interface IManipulator {
 	to?: IToEvent[]
 	to_after_key_up?: IToEvent[]
 	to_if_alone?: IAlone[]
-	conditions?: ICondition[]
+	conditions?: ICond[]
 }
 
 //             "to_if_held_down": [{ "key_code": "left_shift" }],
@@ -101,11 +107,21 @@ export interface IToEvent {
 	halt?:boolean
 }
 
-export interface ICondition {
+export type IDeviceCondType = 'device_if' | 'device_unless' | 'device_exists_if' | 'device_exists_unless'
+
+export interface ICondVar {
 	type: 'variable_if'
 	name: string
 	value: number
 }
+
+export interface ICondDevice {
+	type: IDeviceCondType
+	identifiers: IDeviceIds[]
+	description?: string
+}
+
+export type ICond = ICondVar | ICondDevice
 
 export interface ISimple {
   from: IFromEvent

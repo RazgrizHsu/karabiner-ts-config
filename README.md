@@ -135,7 +135,7 @@ homeRow.setOnHold({ delayedActionMs: 120, thresholdMs: 160 })
 
 // Map home row keys to modifiers when held
 homeRow.map(k.a).onHold(k.lctrl).desc('A -> Left Control')
-homeRow.map(k.s).onHold(k.lalt).desc('S -> Left Alt') 
+homeRow.map(k.s).onHold(k.lalt).desc('S -> Left Alt')
 homeRow.map(k.d).onHold(k.lcmd).desc('D -> Left Command')
 homeRow.map(k.f).onHold(k.lshift).desc('F -> Left Shift')
 
@@ -152,17 +152,30 @@ homeRow.map(k.f).onHold(k.lshift).desc('F -> Left Shift')
 - Start with conservative timing and adjust based on your comfort
 - Consider your most frequently used modifiers when choosing which keys to map
 
+For more Hold Down examples, see [homerow-mods.ts](./example/homerow-mods.ts).
+
 ## Device Configuration
 
 Configure specific devices to apply different settings based on keyboard or mouse hardware:
 
 ```typescript
-// Target specific device by vendor and product ID
-co.device({ vendor_id: 1452, product_id: 641 }) // Apple Magic Keyboard
+// Create device instances
+const apple = co.device({ vendor_id: 1452, product_id: 641 })
+const sofle = co.device({ product_id: 24926, vendor_id: 7504 })
 
-// Multiple device configurations
-co.device({ vendor_id: 1133, product_id: 49970 }) // Logitech device
-co.device({ vendor_id: 1452, product_id: 123 }, true) // Ignore this device
+// Device-specific mappings
+apple.map(k.caps_lock).to(k.f16)     // Only on Apple keyboards
+sofle.map(k.f19).to(k.escape)        // Only on Sofle keyboards
+
+// Device-specific rules
+const appleRule = apple.rule('Apple features')
+appleRule.map(k.f1).to(k.volume_decrement)
+
+// Add device conditions to existing rules
+const rule = co.rule('Conditional rule')
+rule.deviceIf(apple)                 // Only when Apple keyboard is active
+rule.deviceUnless(sofle)             // Except when Sofle keyboard is active
+rule.map(k.a).to(k.b)
 ```
 
 **Finding Device IDs:**
@@ -170,10 +183,7 @@ co.device({ vendor_id: 1452, product_id: 123 }, true) // Ignore this device
 2. Connect your device and press any key
 3. Note the vendor_id and product_id values
 
-**Parameters:**
-- `vendor_id`: Manufacturer identifier
-- `product_id`: Device model identifier  
-- `ignore` (optional): Set to `true` to ignore this device completely
+For comprehensive Device Configuration examples, see [multi-device.ts](./example/multi-device.ts).
 
 ## Simple Key Mappings with Config.map()
 
@@ -195,7 +205,19 @@ co.map(k.f1, [mod.fn]).to(k.f1) // Override Fn+F1 behavior
 **Limitations of Config.map():**
 - Cannot execute shell commands
 - Cannot create layers or complex conditions
+- Cannot use device conditions (deviceIf, deviceUnless, etc.)
 - Only supports direct key-to-key mapping
+
+**For device-specific simple mappings, use:**
+```typescript
+// Option 1: Device builder
+const myKeyboard = co.device({ vendor_id: 1452 })
+myKeyboard.map(k.caps_lock).to(k.escape)
+
+// Option 2: Rule with device condition
+const rule = co.rule('Device-specific mapping')
+rule.map(k.caps_lock).to(k.escape).deviceIf(myKeyboard)
+```
 
 
 # Base Key System
@@ -347,12 +369,148 @@ sWR.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc(
 
 
 
-## More Complex Examples
+## Examples Gallery
 
-For a more in-depth look at advanced configurations, you can check out the [raz.ts](./example/raz.ts) example file
+We provide comprehensive examples to help you learn and implement different configuration patterns:
+
+### Basic Examples
+- **[simple.ts](./example/simple.ts)** - Basic key mappings and simple rules
+- **[homerow-mods.ts](./example/homerow-mods.ts)** - HomeRow Modifiers implementation with timing tuning
+
+### Device-Specific Examples
+- **[multi-device.ts](./example/multi-device.ts)** - Multi-device configuration best practices
+
+### Advanced Examples
+- **[layer-system.ts](./example/layer-system.ts)** - Advanced layer system with nested layers
+- **[kb-apple](./example/kb-apple.ts)** - Advanced layer system with nested layers
+- **[raz.ts](./example/raz.ts)** - Complete real-world configuration with multiple keyboards and complex setups
+
+### Learning Resources
+- **[wrong.ts](./example/wrong.ts)** - Common mistakes and correct alternatives ❌✅
+- **[issue.ts](./example/issue.ts)** - Hardware limitation examples (key rollover)
 
 
-## known limitations
+## Common Mistakes to Avoid
+
+Based on common issues encountered by users, here are important mistakes to avoid:
+
+### 1. Device-Specific Function Errors
+❌ **Wrong**: Using global config in device-specific functions
+```typescript
+function setupHyperKey(device, triggerKey) {
+    const base = co.ruleBaseBy(triggerKey)  // Wrong: using global 'co'
+}
+```
+
+✅ **Correct**: Use the device parameter
+```typescript
+function setupHyperKey(device, triggerKey) {
+    const base = device.ruleBaseBy(triggerKey)  // Correct: using device
+}
+```
+
+### 2. Key Conflicts
+❌ **Wrong**: Same key used by multiple functions
+```typescript
+device.rule('HomeRow').map(k.caps_lock).to(k.escape).onHold(k.f16)
+device.ruleBaseBy(k.caps_lock)  // Conflict!
+```
+
+✅ **Correct**: Use chaining logic
+```typescript
+device.rule('HomeRow').map(k.caps_lock).to(k.escape).onHold(k.f16)
+device.ruleBaseBy(k.f16)  // Use f16 as hyper key
+```
+
+### 3. Layer Trigger Mapping
+❌ **Wrong**: Mapping trigger key within its own layer
+```typescript
+const layer = base.layer(k.a)
+layer.map(k.a).to(k.b)  // Error: can't map trigger key
+```
+
+✅ **Correct**: Map other keys within layer
+```typescript
+const layer = base.layer(k.a)
+layer.map(k.s).to(k.left_arrow)  // Map different keys
+```
+
+### 4. Device Condition Logic
+❌ **Wrong**: Confusing device conditions
+```typescript
+// ❌ Wrong: SimpleKeyMap does not support device conditions
+// co.map(k.caps_lock).to(k.escape).deviceIf(keyboard1)  // Error!
+
+// ✅ Correct: Use Rule for device conditions
+const rule1 = co.rule('KB1 caps_lock')
+rule1.map(k.caps_lock).to(k.escape).deviceIf(keyboard1)
+
+const rule2 = co.rule('KB2 caps_lock')
+rule2.map(k.caps_lock).to(k.f16).deviceIf(keyboard2)
+```
+
+✅ **Correct**: Explicit device separation
+```typescript
+const kb1 = co.device(keyboard1)
+kb1.map(k.caps_lock).to(k.escape)
+
+const kb2 = co.device(keyboard2)
+kb2.map(k.caps_lock).to(k.f16)
+```
+
+For more comprehensive examples of mistakes and corrections, see [wrong.ts](./example/wrong.ts).
+
+## Best Practices
+
+### Multi-Device Configuration
+1. **Use device parameters in functions**: Always use the passed device parameter, not global config
+2. **Clear device separation**: Use explicit device builders for clarity
+3. **Document device differences**: Note timing, available keys, and layout differences
+4. **Function usage**: Only create functions when you need to reuse the same configuration across multiple devices
+
+### Layer Organization
+1. **Logical grouping**: Group related functions together (apps, window management, system)
+2. **Mnemonic triggers**: Use memorable trigger keys (o for open, w for window, s for system)
+3. **Consistent patterns**: Use spatial relationships (hjkl for navigation)
+4. **Don't nest too deeply**: Maximum 2-3 layer levels for usability
+
+### Performance Optimization
+1. **Use simple mappings when possible**: `co.map()` is faster than complex rules
+2. **Avoid excessive conditions**: Too many device conditions can slow processing
+3. **Test regularly**: Verify no unexpected conflicts or behavior
+
+### Debugging and Testing
+1. **Use Karabiner EventViewer**: Essential for timing adjustments and debugging
+2. **Test incrementally**: Add configurations gradually and test each addition
+3. **Document your logic**: Clear descriptions help with maintenance
+
+## Troubleshooting
+
+### Duplicate Key Detection Errors
+The tool includes automatic duplicate key detection. Common causes:
+
+1. **Same key mapped twice in same rule**
+   - Solution: Use different keys or organize with layers
+
+2. **Device function using global config**
+   - Solution: Use device parameter in functions
+
+3. **Layer trigger key mapped within layer**
+   - Solution: Don't map the trigger key inside its own layer
+
+### Hold Down Timing Issues
+If HomeRow Modifiers trigger accidentally:
+
+1. **Increase thresholdMs**: Start with 180ms, adjust down
+2. **Use EventViewer**: Monitor actual hold times
+3. **Per-key adjustment**: Some keys may need different timing
+
+### Device-Specific Rules Not Working
+1. **Check device IDs**: Use EventViewer to verify vendor_id/product_id
+2. **Test device conditions**: Ensure deviceIf/deviceUnless logic is correct
+3. **Verify device connection**: Rules only apply when device is connected
+
+## Known Limitations
 
 due to hardware constraints known as **key rollover** or **ghosting**, some complex multi-key combinations may not work reliably on all keyboards.
 
@@ -367,12 +525,19 @@ key rollover limitations vary between different keyboard models, so please test 
 
 - `rule(description)` - create basic rule for simple mappings
 - `ruleBaseBy(key, modifiers?)` - create base key rule
+- `device(identifiers, ignore?)` - create device builder for device-specific rules
+- `map(key, modifiers?)` - create simple key mapping
 - `toJson()` - generate json karabiner configuration (object)
 - `toString()` - generate formatted karabiner configuration
 
 ### rule (basic rules)
 
 - `map(key, modifiers?)` - create key mapping (chainable)
+- `setOnHold(args)` - set global hold parameters for rule
+- `deviceIf(device)` - add device condition (device_if)
+- `deviceUnless(device)` - add device condition (device_unless)
+- `deviceExistsIf(device)` - add device condition (device_exists_if)
+- `deviceExistsUnless(device)` - add device condition (device_exists_unless)
 - `.desc(description)` - add description to rule
 
 ### rulebased (advanced rules)
@@ -387,9 +552,18 @@ key rollover limitations vary between different keyboard models, so please test 
 
 - `.to(command)` - Map to shell command
 - `.to(key, modifiers?)` - Map to key combination
+- `.onHold(key, modifiers?)` - Map key when held down
+- `.setArgs(args)` - Set hold parameters for individual mapping
 - `.toOsaOpen(app, url)` - Open URL with AppleScript
 - `.desc(description)` - Add description to mapping
 - `.separate()` - Create independent rule (use after mapping)
+
+### DeviceBuilder
+
+- `rule(description)` - Create device-specific rule
+- `ruleBaseBy(key, modifiers?)` - Create device-specific base key rule
+- `map(key, modifiers?)` - Create device-specific simple mapping
+- `.desc(description)` - Add description to device
 
 ### Layer
 

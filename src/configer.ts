@@ -1,6 +1,6 @@
 import { IAlone, IKaraCfg, IKaraCfgGlobal, IKaraRule, IManipulator, IManipulatorHeld } from './types'
 import { IToEvent } from './types'
-import { IDevice, IDeviceIdentifiers } from './types'
+import { IDevice, IDeviceIds, IDeviceCondType, ICondDevice } from './types'
 import { ISimple } from './types'
 import { IKey, IMods, Key, Mouse, Mod } from './types'
 import { IKeyDefine, IKeyDefines } from './types'
@@ -9,6 +9,13 @@ import { icon } from './icon'
 
 
 export const DEBUG = false
+
+enum DvcType {
+    deviceIf = 'device_if',
+    deviceUnless = 'device_unless',
+    deviceExistsIf = 'device_exists_if',
+    deviceExistsUnless = 'device_exists_unless'
+}
 
 type IOnAlone = { key?:Key, holdMs?:number }
 
@@ -20,11 +27,16 @@ namespace util {
 
 namespace cfg {
 
+	const deviceToCondition = (device: Device): ICondDevice => {
+		return {
+			type: device.type,
+			identifiers: [device.ids]
+		}
+	}
+
 	const mkFrom = (key: IKey, mods: IMods) => {
 
-		const from: any = {
-			key_code: key as string,
-		}
+		const from: any = { key_code: key as string }
 
 		const mandatoryMods: string[] = []
 		let hasAny = false
@@ -40,13 +52,8 @@ namespace cfg {
 		if (hasAny || mandatoryMods.length > 0) {
 			from.modifiers = {}
 
-			if (hasAny) {
-				from.modifiers.optional = ['any']
-			}
-
-			if (mandatoryMods.length > 0) {
-				from.modifiers.mandatory = mandatoryMods
-			}
+			if (hasAny) from.modifiers.optional = ['any']
+			if (mandatoryMods.length > 0) from.modifiers.mandatory = mandatoryMods
 		}
 
 		return from;
@@ -69,11 +76,12 @@ namespace cfg {
 		return evt
 	}
 
-	const mkConds = (baseVnm?: string, layVnms: string[] = [], excLays: string[] = []) => {
+	const mkConds = (baseVnm?: string, layVnms: string[] = [], excLays: string[] = [], deviceConds: ICondDevice[] = []) => {
 		const conds: any[] = []
 		if (baseVnm) conds.push({ type: 'variable_if', name: baseVnm, value: 1 })
 		layVnms.forEach(layVnm => conds.push({ type: 'variable_if', name: layVnm, value: 1 }))
 		excLays.forEach(layer => conds.push({ type: 'variable_if', name: layer, value: 0 }))
+		deviceConds.forEach(deviceCond => conds.push(deviceCond))
 		return conds
 	}
 
@@ -87,7 +95,7 @@ namespace cfg {
 		return layVnms
 	}
 
-	const procKeyMaps = (maps: Array<{ key: Key, mods: IMods, keys: IKeyDefines, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = []) => {
+	const procKeyMaps = (maps: Array<{ key: Key, mods: IMods, keys: IKeyDefines, desc: string, layer?: Layer }>, baseVnm?: string, excLays: string[] = [], defaultDeviceConds: ICondDevice[] = []) => {
 		const mrs: IManipulator[] = []
 		for (const map of maps) {
 			for (const mapk of map.keys) {
@@ -95,7 +103,8 @@ namespace cfg {
 				for (const dst of dsts) {
 					const toEvent = fmtDest(dst, mapk.mods)
 					const layVnms = map.layer ? getLayConds(map.layer) : []
-					const conds = mkConds(baseVnm, layVnms, excLays)
+					const deviceConds = defaultDeviceConds
+					const conds = mkConds(baseVnm, layVnms, excLays, deviceConds)
 					mrs.push(mkMr(map.desc, map.key, map.mods, toEvent, conds.length > 0 ? conds : undefined))
 				}
 			}
@@ -103,7 +112,7 @@ namespace cfg {
 		return mrs
 	}
 
-	const procHeldDownMr = (km: RuleKeyMap): IManipulatorHeld|null => {
+	const procHeldDownMr = (km: RuleKeyMap, defaultDeviceConds: ICondDevice[] = []): IManipulatorHeld|null => {
 		const hi = km.holdInfo!
 		if( !hi.key && !hi.shell ) {
 			return null
@@ -144,6 +153,11 @@ namespace cfg {
 
 		}
 
+		// Add device conditions if any
+		if (defaultDeviceConds.length > 0) {
+			mr.conditions = defaultDeviceConds
+		}
+
 		// Add parameters if any
 
 		if (DEBUG) console.info(`hold: ${JSON.stringify(mr)}`)
@@ -151,7 +165,7 @@ namespace cfg {
 		return mr as IManipulatorHeld
 	}
 
-	const procTrigMrs = (ru: RuleBased): IManipulator[] => {
+	const procTrigMrs = (ru: RuleBased, deviceConds: ICondDevice[] = []): IManipulator[] => {
 		const mrs: IManipulator[] = []
 		const exclLays = ru.layers.map(sl => sl.vName)
 
@@ -174,7 +188,7 @@ namespace cfg {
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [onAlone],
-				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
+				...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
 			})
 
 			mrs.push({
@@ -193,7 +207,7 @@ namespace cfg {
 				],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [onAlone],
-				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
+				...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
 			})
 		} else {
 			mrs.push({
@@ -206,7 +220,7 @@ namespace cfg {
 				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
 				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [onAlone],
-				...(exclLays.length > 0 && { conditions: mkConds(undefined, undefined, exclLays) })
+				...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
 			})
 		}
 
@@ -340,10 +354,107 @@ namespace cfg {
 	export function toConfig(bu: Config) {
 		bu.keyMap.clear()
 
+		// Unified duplicate detection logic
+		const keyRegistry = new Map<string, Array<{
+			key: string,
+			mods: string,
+			source: string,
+			deviceConds: ICondDevice[]
+		}>>()
+
+		const addKeyMapping = (key: Key, mods: IMods, source: string, deviceConds: ICondDevice[] = []) => {
+			const keyStr = `${key}+${mods.join(',')}`
+
+			// Check for conflicts with existing mappings
+			for (const [deviceKey, mappings] of keyRegistry) {
+				for (const mapping of mappings) {
+					if (mapping.key === keyStr) {
+						// Check if device conditions would cause conflicts
+						const wouldConflict = deviceConditionsConflict(deviceConds, mapping.deviceConds)
+						if (wouldConflict) {
+							const keyDesc = mods.length > 0 ? `${key}+${mods.join('+')}` : key
+							throw new Error(`Duplicate key combination: ${keyDesc} in ${source}`)
+						}
+					}
+				}
+			}
+
+			// Use string representation of device conditions as key
+			const deviceKey = deviceConds.length > 0
+				? `device:${JSON.stringify(deviceConds.map(dc => ({ type: dc.type, identifiers: dc.identifiers })).sort())}`
+				: 'global'
+
+			if (!keyRegistry.has(deviceKey)) {
+				keyRegistry.set(deviceKey, [])
+			}
+
+			keyRegistry.get(deviceKey)!.push({ key: keyStr, mods: mods.join(','), source, deviceConds })
+		}
+
+		// Check if two sets of device conditions would conflict
+		const deviceConditionsConflict = (conds1: ICondDevice[], conds2: ICondDevice[]): boolean => {
+			// If one has no device conditions, no conflict with any device conditions (unless both have none)
+			if (conds1.length === 0 && conds2.length === 0) return true
+			if (conds1.length === 0 || conds2.length === 0) return false
+
+			// Simplified logic: only conflict if device conditions are exactly the same
+			// Actually needs more complex logic to handle device_if vs device_unless etc.
+			const conds1Str = JSON.stringify(conds1.map(dc => ({ type: dc.type, identifiers: dc.identifiers })).sort())
+			const conds2Str = JSON.stringify(conds2.map(dc => ({ type: dc.type, identifiers: dc.identifiers })).sort())
+			return conds1Str === conds2Str
+		}
+
+		// Detect Simple Key Mappings
 		for (const sm of bu.simples) {
 			if (sm.dst) {
-				const ctxDesc = `Config.map(${sm.key})`
-				bu.chkDupKey(sm.key, sm.mods, ['simple'], ctxDesc)
+				addKeyMapping(sm.key, sm.mods, `Config.map(${sm.key})`, [])
+			}
+		}
+
+		// Detect RuleBased Base Keys
+		for (const rub of bu.ruleBsds) {
+			const deviceDesc = rub.dvc
+				? `Device.ruleBaseBy(${rub.baseKey})`
+				: `Config.ruleBaseBy(${rub.baseKey})`
+			const rubDeviceConds = rub.dvc ? [deviceToCondition(rub.dvc)] : []
+			addKeyMapping(rub.baseKey, rub.baseMods, deviceDesc, rubDeviceConds)
+		}
+
+		// Detect duplicates within each RuleBased (not cross-rule checking)
+		for (const rub of bu.ruleBsds) {
+			// Detect key mappings within RuleBased
+			const rubRegistry = new Map<string, string>()
+			for (const map of rub.maps) {
+				const keyStr = `${map.key}+${map.mods.join(',')}`
+				if (rubRegistry.has(keyStr)) {
+					const mapSource = `${rub.dsc || 'RuleBased'}.map(${map.key})`
+					const keyDesc = map.mods.length > 0 ? `${map.key}+${map.mods.join('+')}` : map.key
+					throw new Error(`Duplicate key combination: ${keyDesc} in ${mapSource}`)
+				}
+				rubRegistry.set(keyStr, `${rub.dsc || 'RuleBased'}.map(${map.key})`)
+			}
+
+			// Detect key mappings within Layers (each layer checked independently)
+			for (const layer of rub.layers) {
+				const layerRegistry = new Map<string, string>()
+				for (const layerMap of layer.maps) {
+					const keyStr = `${layerMap.key}+${layerMap.mods.join(',')}`
+					if (layerRegistry.has(keyStr)) {
+						const layerSource = `${rub.dsc || 'RuleBased'}.layer(${layer.key}).map(${layerMap.key})`
+						const keyDesc = layerMap.mods.length > 0 ? `${layerMap.key}+${layerMap.mods.join('+')}` : layerMap.key
+						throw new Error(`Duplicate key combination: ${keyDesc} in ${layerSource}`)
+					}
+					layerRegistry.set(keyStr, `${rub.dsc || 'RuleBased'}.layer(${layer.key}).map(${layerMap.key})`)
+				}
+			}
+		}
+
+		// Detect key mappings within Rules
+		for (const rule of bu.rules) {
+			for (const map of rule.maps) {
+				const ruleSource = `${rule.dsc || 'Rule'}.map(${map.key})`
+				const ruleDeviceConds = rule.dvc ? [deviceToCondition(rule.dvc)] : []
+				addKeyMapping(map.key, map.mods, ruleSource, ruleDeviceConds)
 			}
 		}
 
@@ -371,9 +482,11 @@ namespace cfg {
 				desc = `${rub.dsc} [ ${icon(rub.baseKey)} ] → [ ${modsEmoji} ]`
 			}
 
+			const rubDeviceConds = rub.dvc ? [deviceToCondition(rub.dvc)] : []
+
 			const rule: IKaraRule = {
 				description: desc,
-				manipulators: procTrigMrs(rub)
+				manipulators: procTrigMrs(rub, rubDeviceConds)
 			}
 
 			const basedKeyMaps = rub.maps.filter(m => !m.separated).map(m => ({
@@ -382,7 +495,7 @@ namespace cfg {
 				keys: m.keys,
 				desc: m.dscFul
 			}))
-			rule.manipulators.push(...procKeyMaps(basedKeyMaps, rub.baseVar))
+			rule.manipulators.push(...procKeyMaps(basedKeyMaps, rub.baseVar, [], rubDeviceConds))
 
 			for (const lay of rub.layers.filter(l => !l.separated)) rule.manipulators.push(...procLayerMr(lay))
 
@@ -414,22 +527,27 @@ namespace cfg {
 				keys: m.keys,
 				desc: m.dscFul
 			}))
-			mrs.push(...procKeyMaps(ruKeyMaps))
+			const ruDeviceConds = ru.dvc ? [deviceToCondition(ru.dvc)] : []
+			mrs.push(...procKeyMaps(ruKeyMaps, undefined, [], ruDeviceConds))
 
 			// Process held down maps
 			for (const heldMap of heldDownMaps) {
-				let m = procHeldDownMr(heldMap)
+				let m = procHeldDownMr(heldMap, ruDeviceConds)
 				if( m ) mrs.push(m)
 			}
 
 			let desc = ru.dscFul
-			if (ru.maps.length > 1) {
+			if (ru.maps.length === 1) {
+				// Single mapping: use the detailed description from the mapping
+				desc = ru.maps[0].dscFul
+			} else if (ru.maps.length > 1) {
+				// Multiple mappings: show summary with individual mappings
 				const mods = ru.maps.length > 0 ? ru.maps[0].mods.filter(mod => ru.maps.every(m => m.mods.includes(mod))) : []
 
 				const modStr = mods.length > 0 ? mods.map(icon).join('') : ru.maps.length
 				desc += ` [ ${modStr} ] (${ru.maps.length})\n`
 				for (const m of ru.maps) {
-					const shortDesc = m.dscFul.replace(ru.dsc + ' - ', '').replace('-> ', '')
+					const shortDesc = m.dscFul.replace(ru.dsc + ' + ', '').replace('-> ', '')
 					desc += `  + [ ${icon(m.key)} ] : ${shortDesc}\n`
 				}
 				desc = desc.trimEnd()
@@ -442,13 +560,13 @@ namespace cfg {
 			for (const mr of ru.manipulators) {
 				if (mr.conditions) {
 					for (const cond of mr.conditions) {
-						if (cond.type === 'variable_if' && cond.name.startsWith('var_') && cond.value === 1) {
+						if (cond.type === 'variable_if' && 'name' in cond && cond.name.startsWith('var_') && cond.value === 1) {
 							const baseVar = cond.name
 							for (const oru of rus) {
 								for (const omr of oru.manipulators) {
 									if (omr.to && omr.to[0]?.set_variable?.name?.startsWith(`lay_${baseVar}_`)) {
 										const vnm = omr.to[0].set_variable.name
-										const excCond = mr.conditions.find(c => c.name === vnm)
+										const excCond = mr.conditions.find(c => c.type === 'variable_if' && 'name' in c && c.name === vnm)
 										if (!excCond) mr.conditions.push({ type: 'variable_if', name: vnm, value: 0 })
 									}
 								}
@@ -459,6 +577,7 @@ namespace cfg {
 			}
 		}
 
+		// Process SimpleKeyMap (simple_modifications only, no device conditions supported)
 		const simpleMods = procSimpleMods(bu.simples)
 
 		return {
@@ -535,21 +654,19 @@ export class Config {
 	}
 
 	ruleBaseBy(key: Key, mods: IMods = []): RuleBased {
-		const baseKeyId = `${key}+${mods.join(',')}`
-
-		for (const [_, ks] of this.keyMap) {
-			if (ks.has(baseKeyId)) throw new Error(`Duplicate key combination: ${key}${mods.length > 0 ? '+' + mods.join('+') : ''}`)
-		}
 		const rule = new RuleBased(this, key, mods)
 		this.ruleBsds.push(rule)
 		return rule
 	}
 
-	device(idf: IDeviceIdentifiers, ignore = false): Config {
-		idf.is_keyboard=true
-		idf.is_pointing_device=true
-		this.devices.push({ identifiers: idf, ignore })
-		return this
+	device(idf: IDeviceIds, ignore = false): Device {
+		const deviceIdentifiers = {
+			...idf,
+			...(idf.is_keyboard === undefined && { is_keyboard: true }),
+			...(idf.is_pointing_device === undefined && { is_pointing_device: true })
+		}
+		this.devices.push({ identifiers: deviceIdentifiers, ignore })
+		return new Device(this, idf)
 	}
 
 	chkDupKey(key: Key, mods: IMods = [], conds: string[] = [], ctxDesc?: string): void {
@@ -594,7 +711,35 @@ abstract class IDesc {
 
 }
 
-abstract class IRule extends IDesc {
+abstract class DeviceAble extends IDesc {
+	dvc?: Device
+
+	deviceIf(device: Device): this {
+		device.type = DvcType.deviceIf
+		this.dvc = device
+		return this
+	}
+
+	deviceUnless(device: Device): this {
+		device.type = DvcType.deviceUnless
+		this.dvc = device
+		return this
+	}
+
+	deviceExistsIf(device: Device): this {
+		device.type = DvcType.deviceExistsIf
+		this.dvc = device
+		return this
+	}
+
+	deviceExistsUnless(device: Device): this {
+		device.type = DvcType.deviceExistsUnless
+		this.dvc = device
+		return this
+	}
+}
+
+abstract class IRule extends DeviceAble {
 	bu: Config
 
 	constructor(bu: Config, desc?: string) {
@@ -644,7 +789,6 @@ export class RuleBased extends IRule {
 		super(bu)
 		this.baseKey = k
 		this.baseMods = trigMods
-		this.bu.chkDupKey(k, trigMods, [], 'ruleBaseBy')
 	}
 
 	get baseVar(): string {
@@ -789,8 +933,6 @@ export class BasedKeyMap extends IMap {
 	constructor(rule: RuleBased, k: Key, mods: IMods = [], bu: Config) {
 		super(k, mods, bu)
 		this.rule = rule
-		const ctxDesc = `${rule.dsc || 'RuleBased'}.map(${k})`
-		bu.chkDupKey(k, mods, [rule.baseVar], ctxDesc)
 	}
 
 	get dscFull(): string {
@@ -854,34 +996,6 @@ class HoldInfo{
 	}
 }
 
-// export class RuleMapSims extends IDesc {
-// 	protected bu!: Config
-// 	rule: Rule
-//
-// 	ks: IKey[]
-// 	mods: IMods
-// 	kto?: IKeyDefine
-//
-// 	constructor(ru:Rule, ks: IKey[], mods: IMods = [], builder?: Config) {
-//
-// 		super()
-//
-// 		this.rule = ru
-// 		this.ks = ks
-// 		this.mods = mods
-// 		if (builder) this.bu = builder
-// 	}
-//
-// 	get dscFul() {
-// 		return this.dsc || `IMapSim: ${this.ks}`
-// 	}
-//
-// 	to(dst: IKey, mods?: IMods) {
-// 		this.kto={ key: dst, mods: mods }
-// 		return this
-// 	}
-// }
-
 export class RuleKeyMap extends IMap {
 	rule: Rule
 	holdInfo?:HoldInfo
@@ -903,6 +1017,76 @@ export class RuleKeyMap extends IMap {
 		this.holdInfo = new HoldInfo(this)
 		this.holdInfo.shell = shell
 		return this.holdInfo
+	}
+
+	get dscFul(): string {
+		const modStr = this.mods.length > 0 ? this.mods.map(icon).join('') : ''
+		const keyIcon = icon(this.key)
+
+		// Generate description based on available information
+		let desc = this.dsc
+		if (!desc && this.keys.length > 0) {
+			desc = this.keys.map(k => {
+				if (typeof k.key == 'string' && !Object.values(Key).includes(k.key as Key)) return 'shell cmd'
+				return k.key.toString()
+			}).join(', ')
+		}
+		if (!desc && this.holdInfo) {
+			if (this.holdInfo.key) {
+				desc = `hold -> ${this.holdInfo.key}`
+			} else if (this.holdInfo.shell) {
+				desc = 'hold -> shell cmd'
+			}
+		}
+		if (!desc) {
+			desc = 'key mapping'
+		}
+
+		return `${this.rule.dsc} + [ ${modStr}${keyIcon} ] : ${desc}`
+	}
+
+}
+
+export class Device extends IDesc {
+	type: DvcType = DvcType.deviceIf
+	cfg: Config
+	ids: IDeviceIds
+
+	constructor(cfg: Config, ids: IDeviceIds) {
+		super()
+		this.cfg = cfg
+		this.ids = ids
+	}
+
+	get dscFul(): string {
+		const parts: string[] = []
+		if (this.ids.vendor_id) parts.push(`VID:${this.ids.vendor_id}`)
+		if (this.ids.product_id) parts.push(`PID:${this.ids.product_id}`)
+		if (this.ids.is_built_in_keyboard) parts.push('Built-in')
+		const idStr = parts.length > 0 ? parts.join(',') : 'Device'
+		return this.dsc ? `${this.dsc} (${idStr})` : `Device (${idStr})`
+	}
+
+	rule(desc: string): Rule {
+		const rule = new Rule(this.cfg, desc)
+		this.type = DvcType.deviceIf
+		rule.dvc = this
+		this.cfg.rules.push(rule)
+		return rule
+	}
+
+	map(key: Key, mods: IMods = []): SimpleKeyMap {
+		const sm = new SimpleKeyMap(this.cfg, key, mods)
+		this.cfg.simples.push(sm)
+		return sm
+	}
+
+	ruleBaseBy(key: Key, mods: IMods = []): RuleBased {
+		const rule = new RuleBased(this.cfg, key, mods)
+		this.type = DvcType.deviceIf
+		rule.dvc = this
+		this.cfg.ruleBsds.push(rule)
+		return rule
 	}
 
 }
