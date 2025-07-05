@@ -1,18 +1,15 @@
-import { Config, Device, Key as k, Mod as mod } from 'karabiner-ts-config'
-// import { Config, Device, Key as k, Mod as mod } from '../src'
+import { Config, IConfigDevice, Key as k, Mod as mod } from 'karabiner-ts-config'
 
 const mdAny = [mod.any]
 const mdLSC = [k.lshift, k.lctrl]
 const mdRSC = [k.rshift, k.rctrl]
 
 
-
 const co = new Config()
 co.global.show_in_menu_bar = true
 
-// sofle keyboard
-let sofle = co.device({product_id:24926,vendor_id:7504})
 
+let sofle = co.device({product_id:24926,vendor_id:7504}) //sofle keyboard
 let dvAir = co.device({ product_id:641, vendor_id:1452 })     //macbook air
 let dvApMgKbV1 = co.device({ product_id:569, vendor_id:1452 }) //magickeyboard v1
 
@@ -28,19 +25,21 @@ setHomeRowMods(dvApMgKbV1)
 setHyperFJ( dvApMgKbV1, k.f, k.f, 'hyper:apple.L' )
 setHyperFJ( dvApMgKbV1, k.j, k.j, 'hyper:apple.R' )
 setHyperLv( dvApMgKbV1, k.caps_lock, '🌟hyper caps')
-
-// because the sofle hold f/j is change in keymap (hardware)
-// homeRowMods also set by zmk
-setHyperFJ( sofle, k.f18, k.none, 'hyper fj' )
+//
+// // because the sofle hold f/j is change in keymap (hardware)
+// // homeRowMods also set by zmk
+setHyperFJ( sofle, k.f18, k.none, 'hyper fj', false )
 setHyperLv( sofle, k.f16, '🌟hyper caps')
 
 //------------------------------------------------------------------------
 // HomeRowMods
 //------------------------------------------------------------------------
-function setHomeRowMods(src) {
+function setHomeRowMods(src:IConfigDevice) {
 
+	// delayedActionMs:
+	// 如果你發現你打
 	let hr = src.rule('Home Rows')
-	hr.setOnHold({ delayedActionMs:150, thresholdMs:180 })
+	hr.setOnHold({ delayedActionMs:120, thresholdMs:250 })
 	hr.map(k.caps_lock,mdAny).to(k.escape).onHold(k.f16)
 	hr.map(k.a,mdAny).onHold(k.lshift)
 	hr.map(k.s,mdAny).onHold(k.lctrl)
@@ -53,23 +52,26 @@ function setHomeRowMods(src) {
 //------------------------------------------------------------------------
 // hyper f / j, original use zmk to map kp or hold
 //------------------------------------------------------------------------
-function setHyperFJ( src, trgK, aloneK, desc) {
+function setHyperFJ( src:IConfigDevice, trgK:k, aloneK:k, desc, isAppleKB = true) {
 
 	// use zmk to setup f18 key
-	const f18 = src.ruleBaseBy(trgK).desc(desc).ifAlone(aloneK)
-	f18.map(k.spacebar,mdAny).to(k.delete_forward)
-	f18.map(k.enter).to(k.delete_or_backspace)
+	const f18 = src.ruleBaseBy(trgK).desc(desc).ifAlone(aloneK, 130, isAppleKB)
 
+	// 這個設定是因為我的sofle鍵盤的enter鍵在下方，比蠅方便
+	if ( !isAppleKB ) {
+		f18.map(k.spacebar,mdAny).to(k.delete_forward)
+		f18.map(k.enter).to(k.delete_or_backspace)
+	}
 
 	f18.map(k.k,mdAny).to(k.up_arrow).desc('Up')
 	f18.map(k.j,mdAny).to(k.down_arrow).desc('Down')
 	f18.map(k.h,mdAny).to(k.left_arrow).desc('Left')
 	f18.map(k.l,mdAny).to(k.right_arrow).desc('Right')
 
-	f18.map(k.k,mdLSC).to(k.page_up).desc('Up')
-	f18.map(k.j,mdLSC).to(k.page_down).desc('Down')
-	f18.map(k.h,mdLSC).to(k.home).desc('Left')
-	f18.map(k.l,mdLSC).to(k.end).desc('Right')
+	// f18.map(k.k,mdLSC).to(k.page_up).desc('Up')
+	// if( src != k.j ) f18.map(k.j,mdLSC).to(k.page_down).desc('Down')
+	// f18.map(k.h,mdLSC).to(k.home).desc('Left')
+	// f18.map(k.l,mdLSC).to(k.end).desc('Right')
 
 	// make left hand can input all numbers
 	f18.map(k.q,mdAny).to(k.n6).desc('6')
@@ -115,7 +117,7 @@ function setHyperFJ( src, trgK, aloneK, desc) {
 //------------------------------------------------------------------------
 // hyper key
 //------------------------------------------------------------------------
-function setHyperLv( src, trgK, desc ){
+function setHyperLv( src:IConfigDevice, trgK:k, desc ){
 	const bse = src.ruleBaseBy(trgK) .desc(desc)
 		.ifAlone(k.escape)
 

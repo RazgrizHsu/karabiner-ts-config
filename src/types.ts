@@ -51,6 +51,7 @@ export interface IAlone {
 	key_code: string
 	hold_down_milliseconds?: number
 	halt?:boolean
+	repeat?:boolean
 }
 
 export interface IManipulator {
@@ -58,9 +59,17 @@ export interface IManipulator {
 	type: 'basic'
 	from: IFromEvent
 	to?: IToEvent[]
+	to_if_held_down?: IToEvent[]
 	to_after_key_up?: IToEvent[]
 	to_if_alone?: IAlone[]
 	conditions?: ICond[]
+	parameters?: { [key: string]:any }
+
+
+	to_delayed_action?: {
+		to_if_canceled: IToEvent[],
+		to_if_invoked?: IToEvent[]
+	}
 }
 
 //             "to_if_held_down": [{ "key_code": "left_shift" }],

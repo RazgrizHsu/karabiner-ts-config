@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { resolve, dirname } from 'path'
-import { existsSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, writeFileSync, mkdirSync, readFileSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { createInterface } from 'readline'
 
@@ -53,7 +53,25 @@ async function askUserConfirmation(question: string): Promise<boolean> {
 
 async function main() {
 	try {
-		const uMod = require(path)
+		let uMod
+		if (path.endsWith('.ts')) {
+			const ts = require('typescript')
+			const source = readFileSync(path, 'utf8')
+			const result = ts.transpile(source, {
+				module: ts.ModuleKind.CommonJS,
+				target: ts.ScriptTarget.ES2020,
+				esModuleInterop: true
+			})
+			const tempFile = path.replace('.ts', '.temp.js')
+			writeFileSync(tempFile, result)
+			try {
+				uMod = require(tempFile)
+			} finally {
+				unlinkSync(tempFile)
+			}
+		} else {
+			uMod = require(path)
+		}
 
 		let rst
 		if (typeof uMod.default == 'function') rst = uMod.default()

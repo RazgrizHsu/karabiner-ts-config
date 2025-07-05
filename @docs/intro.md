@@ -18,9 +18,9 @@ GitHub: github.com/RazgrizHsu/karabiner-ts-config
 **Title:** I was tired of 15,000 lines of Karabiner JSON, so I built a TypeScript config tool with 78x efficiency
 
 **Post:**
-Hey r/MechanicalKeyboards!
+Hey r/ErgoMechKeyboards!
 
-Got sick of manually editing massive Karabiner JSON files, so I built **karabiner-ts-config**. 
+Got sick of manually editing massive Karabiner JSON files, so I built **karabiner-ts-config**.
 
 Write this:
 ```typescript

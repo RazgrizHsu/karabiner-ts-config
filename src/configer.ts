@@ -7,6 +7,7 @@ import { IKeyDefine, IKeyDefines } from './types'
 
 import { icon } from './icon'
 
+export type IConfigDevice = Device | Config
 
 export const DEBUG = false
 
@@ -17,7 +18,7 @@ enum DvcType {
     ExistsUnless = 'device_exists_unless'
 }
 
-type IOnAlone = { key?:Key, holdMs?:number }
+type IOnAlone = { key?:Key, holdMs?:number, apple?:boolean }
 
 namespace util {
 	export function mkCmd_OsaOpen(app: string, url: string): string {
@@ -204,13 +205,12 @@ namespace cfg {
 		let onAlone:IAlone = { key_code: Key.escape }
 		if ( ru.onAlone && ru.onAlone.key ) {
 			onAlone = { key_code: ru.onAlone.key }
-			if ( ru.onAlone.holdMs ) onAlone.hold_down_milliseconds = ru.onAlone.holdMs
 		}
 
 		if (ru.comboMode && ru.comboTarget) {
 
 			mrs.push({
-				description: `${ru.baseKey} -> Set ${ru.baseVar} variable`,
+				description: `${ru.baseKey} T:1 -> Set ${ru.baseVar} variable`,
 				type: 'basic',
 				from: {
 					key_code: ru.baseKey,
@@ -223,7 +223,7 @@ namespace cfg {
 			})
 
 			mrs.push({
-				description: `${ru.baseKey} -> ${ru.comboTarget.key} + mods`,
+				description: `${ru.baseKey} T:2 -> ${ru.comboTarget.key} + mods`,
 				type: 'basic',
 				from: {
 					key_code: ru.baseKey,
@@ -236,23 +236,84 @@ namespace cfg {
 						modifiers: ru.comboTarget.mods.map(m => m.toString())
 					}
 				],
-				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				to_if_alone: [onAlone],
+				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
 				...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
 			})
 		} else {
-			mrs.push({
-				description: `${ru.baseKey} -> Set ${ru.baseVar} variable`,
-				type: 'basic',
-				from: {
-					key_code: ru.baseKey,
-					modifiers: ru.baseMods.length > 0 ? { mandatory: ru.baseMods.map(m => m.toString()) } : { optional: [Mod.any] }
-				},
-				to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
-				to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
-				to_if_alone: [onAlone],
-				...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
-			})
+			// hold to change variable, press to get key
+
+			if(!ru.onAlone.apple){
+
+				if ( ru.onAlone.holdMs ) onAlone.hold_down_milliseconds = ru.onAlone.holdMs
+				mrs.push({
+					description: `${ru.baseKey} T:31 -> Set ${ru.baseVar} variable`,
+					type: 'basic',
+					from: {
+						key_code: ru.baseKey,
+						modifiers: ru.baseMods.length > 0 ? { mandatory: ru.baseMods.map(m => m.toString()) } : { optional: [Mod.any] }
+					},
+					to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
+					to_if_alone: [onAlone],
+					to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
+					...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
+				})
+			}
+			else {
+				// slow
+				// mrs.push({
+				// 	description: `${ru.baseKey} T:32 -> Set ${ru.baseVar} variable`,
+				// 	type: 'basic',
+				// 	from: {
+				// 		key_code: ru.baseKey,
+				// 		modifiers: ru.baseMods.length > 0 ? { mandatory: ru.baseMods.map(m => m.toString()) } : { optional: [Mod.any] }
+				// 	},
+				// 	// to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
+				// 	to_if_alone: [onAlone],
+				// 	to_if_held_down: [{ set_variable: { name: ru.baseVar, value: 1 } }],
+				// 	to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
+				// 	parameters: { "basic.to_if_held_down_threshold_milliseconds": ru.onAlone.holdMs ?? 200 },
+				// 	...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
+				// })
+
+				// This version allows fast typing, but the downside is that when pressing combo keys, there's no protection and the original key will also be output
+				// mrs.push({
+				// 	description: `${ru.baseKey} T:32 -> Set ${ru.baseVar} variable`,
+				// 	type: 'basic',
+				// 	from: { key_code: ru.baseKey, modifiers: ru.baseMods.length > 0 ? { mandatory: ru.baseMods.map(m => m.toString()) } : { optional: [Mod.any] } },
+				// 	to: [{ set_variable: { name: ru.baseVar, value: 1 } }],
+				// 	to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
+				// 	to_delayed_action:{
+				// 		to_if_invoked: [{ key_code: ru.baseKey }],
+				// 		to_if_canceled: [{ key_code: ru.baseKey }]
+				// 	},
+				// 	parameters: { "basic.to_delayed_action_delay_milliseconds": ru.onAlone.holdMs ?? 100 },
+				// 	...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
+				// })
+
+
+				// This is currently the best version I've tested so far, please let me know if you have better suggestions
+
+				// onAlone.halt = true
+				let holdMs = ru.onAlone.holdMs ?? 150
+				mrs.push({
+					description: `${ru.baseKey} T:32 -> Set ${ru.baseVar} variable`,
+					type: 'basic',
+					from: { key_code: ru.baseKey, modifiers: ru.baseMods.length > 0 ? { mandatory: ru.baseMods.map(m => m.toString()) } : { optional: [Mod.any] } },
+					to_if_alone: [onAlone],
+					to_if_held_down: [{ set_variable: { name: ru.baseVar, value: 1 } }],
+					to_after_key_up: [{ set_variable: { name: ru.baseVar, value: 0 } }],
+					to_delayed_action:{
+						to_if_canceled: [{ key_code: ru.baseKey }]
+					},
+					parameters: {
+						"basic.to_if_alone_timeout_milliseconds": holdMs,
+						"basic.to_if_held_down_threshold_milliseconds": holdMs,
+						"basic.to_delayed_action_delay_milliseconds": holdMs,
+					},
+					...((exclLays.length > 0 || deviceConds.length > 0) && { conditions: mkConds(undefined, undefined, exclLays, deviceConds) })
+				})
+			}
 		}
 
 		return mrs
@@ -661,7 +722,7 @@ export class Config {
 
 	toString(): String {
 		const config = this.toJSON()
-		const zipNms = ['conditions', 'set_variable', 'modifiers', 'to_if_alone', 'from', 'to']
+		const zipNms = ['conditions', 'set_variable', 'modifiers', 'to_if_alone', 'to_if_held_down', 'from', 'to', 'to_after_key_up']
 		return cfg.fmtVal(config, 0, zipNms)
 	}
 }
@@ -772,8 +833,8 @@ export class RuleBased extends IRule {
 		return this.dsc ? `${this.dsc}` : `RuleBased: ${this.baseKey}`
 	}
 
-	ifAlone(key:Key, holdMs=100) {
-		this.onAlone = { key, holdMs }
+	ifAlone(key:Key, holdMs=200, apple=false) {
+		this.onAlone = { key, holdMs, apple }
 		return this
 	}
 
