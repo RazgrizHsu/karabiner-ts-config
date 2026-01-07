@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+import subprocess
+import sys
+from pathlib import Path
+
+def run_cmd(cmd, check=True):
+    """執行命令並回傳結果"""
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=check)
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.CalledProcessError as e:
+        return False, e.stdout, e.stderr
+
+def check_npm_link():
+    """檢查 npm link 是否有效"""
+    print("檢查 npm link 狀態...")
+
+    # 檢查全域 npm 模組中是否有 karabiner-ts-config
+    success, stdout, _ = run_cmd("npm ls -g --depth=0 karabiner-ts-config", check=False)
+
+    if not success or "karabiner-ts-config" not in stdout:
+        print("⚠️  未找到 npm link，正在建立...")
+        success, _, stderr = run_cmd("npm link")
+        if not success:
+            print(f"❌ npm link 失敗: {stderr}")
+            return False
+        print("✅ npm link 建立成功")
+    else:
+        print("✅ npm link 已存在")
+
+    return True
+
+def run_karabiner_config(config_file="./example/raz.ts"):
+    """執行 karabiner-ts-config 指令"""
+    print(f"\n執行設定檔: {config_file}")
+
+    # 檢查檔案是否存在
+    if not Path(config_file).exists():
+        print(f"❌ 找不到設定檔: {config_file}")
+        return False
+
+    # 執行指令
+    cmd = f"node dist/bin/cli.js {config_file} -y"
+    success, stdout, stderr = run_cmd(cmd)
+
+    if success:
+        print(stdout)
+        return True
+    else:
+        print("❌ 執行失敗:")
+        if stderr:
+            print(stderr)
+        return False
+
+def main():
+    """主程式"""
+    print("🚀 Karabiner TypeScript Config Runner")
+    print("=" * 40)
+
+    # 檢查是否在專案目錄
+    if not Path("package.json").exists():
+        print("❌ 請在專案根目錄執行此腳本")
+        sys.exit(1)
+
+    # 建構專案
+    print("\n建構專案...")
+    success, _, stderr = run_cmd("npm run build")
+    if not success:
+        print(f"❌ 建構失敗: {stderr}")
+        sys.exit(1)
+    print("✅ 建構成功")
+
+    # 檢查 npm link
+    if not check_npm_link():
+        sys.exit(1)
+
+    # 執行設定
+    config_file = sys.argv[1] if len(sys.argv) > 1 else "./example/raz.ts"
+    if not run_karabiner_config(config_file):
+        sys.exit(1)
+
+    print("\n✨ 完成！Karabiner 設定已更新")
+
+if __name__ == "__main__":
+    main()

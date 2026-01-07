@@ -1,6 +1,6 @@
 {
   "name": "karabiner-ts-config",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "TypeScript Builder for Karabiner Elements configuration",
   "author": {
     "name": "RazgrizHsu",
@@ -24,8 +24,8 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "example": "npx karabiner-ts-config ./example/raz.ts ./test.json -y",
-    "raz": "tsc;npx karabiner-ts-config ./example/raz.ts -y"
+    "example": "node dist/bin/cli.js ./example/raz.ts ./test.json -y",
+    "raz": "npm run build && node dist/bin/cli.js ./example/raz.ts -y"
   },
   "dependencies": {
     "typescript": "^5.8.3"

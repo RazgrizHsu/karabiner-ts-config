@@ -337,8 +337,8 @@ Sometimes, you'll need to use osascript to open applications or specific URLs, e
 ```typescript
 // For some cases, you will need to open using osascript
 hyp.map(k.a).to(`osascript -e 'tell application "APPLICATION_NAME" to open location "URL_HERE"'`)
-// You can simplify this with toOsaOpen
-hyp.map(k.a).toOsaOpen( 'APPLICATION_NAME', 'URL_HERE' )
+// You can simplify this with toUrl
+hyp.map(k.a).toUrl( 'URL_HERE', 'APPLICATION_NAME' )
 
 ```
 
@@ -363,11 +363,9 @@ Here's how to create a simple layer for launching applications.
 const sO = hyp.layer(k.o).desc('Open Applications')
 
 // Define the mappings within this layer:
-sO.map(k.m).to(`open -a 'Obsidian'`).desc('Open Obsidian')
-sO.map(k.v).to(`open -a 'Visual Studio Code'`).desc('Open VSCode')
-
-// Alternative: Using toOsaOpen method
-sO.map(k.s).toOsaOpen('Slack').desc('Open Slack')
+sO.map(k.m).toOpen('Obsidian').desc('Open Obsidian')
+sO.map(k.v).toOpen('Visual Studio Code').desc('Open VSCode')
+sO.map(k.s).toOpen('Slack').desc('Open Slack')
 ```
 
 ### Creating a Nested Layer
@@ -382,19 +380,19 @@ const sW = hyp.layer(k.w).desc('Window Management')
 
 // Define top-level commands in the parent layer
 // Usage: Base Key + W, then O/J/K
-sW.map(k.o).to(`open -g 'rectangle://execute-action?name=next-display'`).desc('Next Display')
-sW.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller'`).desc('Small')
-sW.map(k.k).to(`open -g 'rectangle://execute-action?name=larger'`).desc('Large')
+sW.map(k.o).toUrl('rectangle://execute-action?name=next-display', true).desc('Next Display')
+sW.map(k.j).toUrl('rectangle://execute-action?name=smaller', true).desc('Small')
+sW.map(k.k).toUrl('rectangle://execute-action?name=larger', true).desc('Large')
 
 // 2. Create the nested layer for "Window Resize" (Trigger: Base Key + W + R)
 const sWR = sW.layer(k.r).desc('Window resize')
 
 // Define commands within the nested layer
 // Usage: Base Key + W + R, then H/L/J/K
-sWR.map(k.h).to(`open -g 'rectangle://execute-action?name=smaller-width'`).desc('Smaller Width')
-sWR.map(k.l).to(`open -g 'rectangle://execute-action?name=larger-width'`).desc('Larger Width')
-sWR.map(k.j).to(`open -g 'rectangle://execute-action?name=smaller-height'`).desc('Smaller Height')
-sWR.map(k.k).to(`open -g 'rectangle://execute-action?name=larger-height'`).desc('Larger Height')
+sWR.map(k.h).toUrl('rectangle://execute-action?name=smaller-width', true).desc('Smaller Width')
+sWR.map(k.l).toUrl('rectangle://execute-action?name=larger-width', true).desc('Larger Width')
+sWR.map(k.j).toUrl('rectangle://execute-action?name=smaller-height', true).desc('Smaller Height')
+sWR.map(k.k).toUrl('rectangle://execute-action?name=larger-height', true).desc('Larger Height')
 ```
 
 ### When to Use Direct Mappings vs. Layers
@@ -589,7 +587,9 @@ key rollover limitations vary between different keyboard models, so please test 
 - `.to(key, modifiers?)` - Map to key combination
 - `.onHold(key, modifiers?)` - Map key when held down
 - `.setArgs(args)` - Set hold parameters for individual mapping
-- `.toOsaOpen(app, url)` - Open URL with AppleScript
+- `.toOpen(app, unmin?)` - Open app (`open -a`), set `unmin=true` to restore minimized windows
+- `.toActivate(app, withOpen?)` - Activate app (osascript), set `withOpen=true` to also run `open -a`
+- `.toUrl(url, opt?)` - Open URL: no opt=system default, `true`=background, `'AppName'`=specific app
 - `.desc(description)` - Add description to mapping
 
 ### DeviceBuilder
@@ -603,7 +603,7 @@ key rollover limitations vary between different keyboard models, so please test 
 
 - `map(key, modifiers?)` - Create key mapping within layer
 - `.desc(description)` - Add description to layer
-- All mapping methods available (`.to()`, `.toOsaOpen()`, etc.)
+- All mapping methods available (`.to()`, `.toOpen()`, `.toActivate()`, `.toUrl()`, etc.)
 
 
 ## Author

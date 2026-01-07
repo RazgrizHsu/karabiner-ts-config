@@ -21,8 +21,22 @@ enum DvcType {
 type IOnAlone = { key?:Key, holdMs?:number, apple?:boolean }
 
 namespace util {
-	export function mkCmd_OsaOpen(app: string, url: string): string {
-		return `osascript -e 'tell application "${app}" to open location "${url}"'`
+	// open -a "app", unmin=true to restore minimized windows
+	export function mkCmd_Open(app: string, unmin = false): string {
+		if (unmin) return `osascript -e 'tell application "System Events" to tell process "${app}" to set value of attribute "AXMinimized" of every window to false' && open -a "${app}"`
+		return `open -a "${app}"`
+	}
+
+	// osascript activate, withOpen=true to also run open -a
+	export function mkCmd_Activate(app: string, withOpen = false): string {
+		if (withOpen) return `osascript -e 'tell application "${app}" to activate'; open -a "${app}"`
+		return `osascript -e 'tell application "${app}" to activate'`
+	}
+
+	// open url: opt=true for background, opt=string for specific app
+	export function mkCmd_OpenUrl(url: string, opt?: boolean | string): string {
+		if (typeof opt === 'string') return `osascript -e 'tell application "${opt}" to open location "${url}"'`
+		return opt ? `open -g '${url}'` : `open '${url}'`
 	}
 }
 
@@ -503,7 +517,7 @@ namespace cfg {
 
 			const dvc = formatDeviceInfo(rub.dvc)
 			const base = ` - based[ ${icon(rub.baseKey)} ]`
-			const keyMaps = rub.maps.map(m => ({key: m.key, desc: m.dsc, keys:m.keys || ''}))
+			const keyMaps = rub.maps.map(m => ({key: m.key, desc: m.dsc, keys:m.keys || []}))
 
 			if (dvc || keyMaps.length > 0 || rub.layers.length > 0) {
 				const mapDetails = keyMaps.map(m => {
@@ -926,8 +940,16 @@ abstract class IMap extends IDesc {
 		return this
 	}
 
-	toOsaOpen(app: string, url: string) {
-		return this.to(util.mkCmd_OsaOpen(app, url))
+	toOpen(app: string, unmin = false) {
+		return this.to(util.mkCmd_Open(app, unmin))
+	}
+
+	toActivate(app: string, withOpen = false) {
+		return this.to(util.mkCmd_Activate(app, withOpen))
+	}
+
+	toUrl(url: string, opt?: boolean | string) {
+		return this.to(util.mkCmd_OpenUrl(url, opt))
 	}
 }
 
@@ -948,8 +970,16 @@ export class SimpleKeyMap{
 		return this
 	}
 
-	toOsaOpen(app: string, url: string): SimpleKeyMap {
-		return this.to(util.mkCmd_OsaOpen(app, url))
+	toOpen(app: string, unmin = false): SimpleKeyMap {
+		return this.to(util.mkCmd_Open(app, unmin))
+	}
+
+	toActivate(app: string, withOpen = false): SimpleKeyMap {
+		return this.to(util.mkCmd_Activate(app, withOpen))
+	}
+
+	toUrl(url: string, opt?: boolean | string): SimpleKeyMap {
+		return this.to(util.mkCmd_OpenUrl(url, opt))
 	}
 }
 
