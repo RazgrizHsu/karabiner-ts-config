@@ -53,6 +53,21 @@ def run_karabiner_config(config_file="./example/raz.ts"):
             print(stderr)
         return False
 
+def publish_npm(otp=None):
+    """發佈至 npmjs"""
+    print("\n發佈至 npmjs...")
+    cmd = "npm publish --access public"
+    if otp:
+        cmd += f" --otp={otp}"
+    success, stdout, stderr = run_cmd(cmd)
+    if success:
+        print("✅ 發佈成功")
+        print(stdout)
+        return True
+    else:
+        print(f"❌ 發佈失敗: {stderr}")
+        return False
+
 def main():
     """主程式"""
     print("🚀 Karabiner TypeScript Config Runner")
@@ -71,12 +86,26 @@ def main():
         sys.exit(1)
     print("✅ 建構成功")
 
+    # 檢查 -pub 參數
+    if "-pub" in sys.argv:
+        otp = None
+        for arg in sys.argv:
+            if arg.startswith("-otp="):
+                otp = arg.split("=")[1]
+        if not otp:
+            otp = input("請輸入 OTP: ").strip()
+        if not publish_npm(otp):
+            sys.exit(1)
+        print("\n✨ 完成！已發佈至 npmjs")
+        return
+
     # 檢查 npm link
     if not check_npm_link():
         sys.exit(1)
 
     # 執行設定
-    config_file = sys.argv[1] if len(sys.argv) > 1 else "./example/raz.ts"
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    config_file = args[0] if args else "./example/raz.ts"
     if not run_karabiner_config(config_file):
         sys.exit(1)
 

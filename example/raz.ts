@@ -63,12 +63,6 @@ function setHyperFJ( src:IConfigDevice, trgK:k, aloneK:k, desc, isAppleKB = true
 	// use zmk to setup f18 key
 	const f18 = src.ruleBaseBy(trgK).desc(desc).ifAlone(aloneK, 130, isAppleKB)
 
-	// 這個設定是因為我的sofle鍵盤的enter鍵在下方，比較方便
-	if ( !isAppleKB ) {
-		f18.map(k.m,mdAny).to(k.delete_forward)
-		f18.map(k.n,mdAny).to(k.delete_or_backspace)
-		f18.map(k.enter,mdAny).to(k.enter,[k.lshift])
-	}
 
 	// movement
 	f18.map(k.k,mdAny).to(k.up_arrow).desc('Up')
@@ -106,12 +100,20 @@ function setHyperLv( src:IConfigDevice, trgK:k, desc ){
 		.ifAlone(k.escape)
 
 	bse.map(k.f).toActivate('Finder', true).desc('Finder')
-	bse.map(k.t).toOpen('Ghostty', true).desc('ghostty')
+	bse.map(k.t).toOpen('Ghostty', true)
 	bse.map(k.b).toOpen('Firefox').desc('Firefox')
 	bse.map(k.c).toActivate('CocosCreator').desc('cocos')
 	bse.map(k.s).toOpen('Spine').desc('Spine')
+	bse.map(k.l).toOpen('Line').desc('Line')
 
-
+	// App Open
+	const lo = bse.layer(k.o).desc('Open App')
+	lo.map(k.s).toOpen('spotify')
+	lo.map(k.m).toOpen('Obsidian')
+	lo.map(k.p).toOpen('Elmedia Player')
+	lo.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`)
+	lo.map(k.k).toOpen('Krita')
+	lo.map(k.t).toOpen('TexturePacker')
 
 
 	// vim type motion
@@ -134,17 +136,6 @@ function setHyperLv( src:IConfigDevice, trgK:k, desc ){
 
 	// supported on macOS 13 & above (need to have set up 'Background Music' in Accessibility > Audio first to use it).
 	la.map(k.b).to(`CURRENT_STATE=$(defaults read com.apple.ComfortSounds "comfortSoundsEnabled" 2>/dev/null || echo "0"); NEW_STATE_BOOL=$( [ "$CURRENT_STATE" = "1" ] && echo "false" || echo "true" ); defaults write com.apple.ComfortSounds "comfortSoundsEnabled" -bool "$NEW_STATE_BOOL"; launchctl kickstart -k gui/$(id -u)/com.apple.accessibility.heard`).desc('Background Music')
-
-
-	// App Open
-	const lo = bse.layer(k.o).desc('Open App')
-	lo.map(k.s).toOpen('spotify').desc('spotify')
-	lo.map(k.m).toOpen('Obsidian').desc('Obsidian')
-	lo.map(k.l).toOpen('Line').desc('Line')
-	lo.map(k.p).toOpen('Elmedia Player').desc('Elmedia')
-	lo.map(k.j).to(`/Volumes/dyn/jd2/JDownloader.jar`).desc('JD2')
-	lo.map(k.k).toOpen('Krita').desc('krita')
-	lo.map(k.t).toOpen('TexturePacker')
 
 
 

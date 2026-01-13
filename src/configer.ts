@@ -23,14 +23,16 @@ type IOnAlone = { key?:Key, holdMs?:number, apple?:boolean }
 namespace util {
 	// open -a "app", unmin=true to restore minimized windows
 	export function mkCmd_Open(app: string, unmin = false): string {
-		if (unmin) return `osascript -e 'tell application "System Events" to tell process "${app}" to set value of attribute "AXMinimized" of every window to false' && open -a "${app}"`
-		return `open -a "${app}"`
+		let cmd = `open -a "${app}"`
+		if (unmin) cmd += `; osascript -e 'tell application "System Events" to tell process "${app}" to set value of attribute "AXMinimized" of every window to false'`
+		return cmd
 	}
 
 	// osascript activate, withOpen=true to also run open -a
 	export function mkCmd_Activate(app: string, withOpen = false): string {
-		if (withOpen) return `osascript -e 'tell application "${app}" to activate'; open -a "${app}"`
-		return `osascript -e 'tell application "${app}" to activate'`
+		let cmd = `osascript -e 'tell application "${app}" to activate'`
+		if (withOpen) cmd = `open -a "${app}"; ${cmd}`
+		return cmd
 	}
 
 	// open url: opt=true for background, opt=string for specific app
