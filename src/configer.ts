@@ -22,8 +22,9 @@ type IOnAlone = { key?:Key, holdMs?:number, apple?:boolean }
 
 namespace util {
 	// open -a "app", unmin=true to restore minimized windows
-	export function mkCmd_Open(app: string, unmin = false): string {
-		let cmd = `open -a "${app}"`
+	export function mkCmd_Open(app:string,unmin=false,args?:string):string {
+		let cmd=`open -a "${app}"`
+		if (args) cmd += ` --args ${args}`
 		if (unmin) cmd += `; osascript -e 'tell application "System Events" to tell process "${app}" to set value of attribute "AXMinimized" of every window to false'`
 		return cmd
 	}
@@ -191,17 +192,20 @@ namespace cfg {
 
 			mr.to_if_alone = [{ key_code:km.key}]
 			// mr.to_if_alone = [{ key_code:km.key, halt:true}]
-			mr.to_delayed_action = { to_if_canceled:[{ key_code:km.key }] }
+			// to_if_alone 已負責 tap 時送出原鍵; 下面這段 to_delayed_action 會在
+			// tap 後 delay 內按下一鍵時被 cancel, to_if_canceled 又送一次原鍵 → 同鍵出兩次
+			// 例: 內建鍵盤快速打字, f 放開後 120ms 內接下一字母, f 重複輸出
+			// mr.to_delayed_action = { to_if_canceled:[{ key_code:km.key }] }
 
 			let ruha = km.rule.holdArgs
 			let kmha = hi.args
 
 			mr.parameters = {}
 			let msth = ruha?.thresholdMs || kmha.thresholdMs || 150
-			let msda = ruha?.delayedActionMs || kmha.delayedActionMs || 150
+			// let msda = ruha?.delayedActionMs || kmha.delayedActionMs || 150
 			// let msal = ruha?.aloneTimeoutMs || kmha.aloneTimeoutMs || 250
 			if ( msth ) mr.parameters['basic.to_if_held_down_threshold_milliseconds'] = msth
-			if ( msth ) mr.parameters['basic.to_delayed_action_delay_milliseconds'] = msda
+			// if ( msth ) mr.parameters['basic.to_delayed_action_delay_milliseconds'] = msda
 			// if ( msal ) mr.parameters['basic.to_if_alone_timeout_milliseconds'] = msal
 
 		}
@@ -942,16 +946,16 @@ abstract class IMap extends IDesc {
 		return this
 	}
 
-	toOpen(app: string, unmin = false) {
-		return this.to(util.mkCmd_Open(app, unmin))
+	toOpen(app:string,unmin=false,args?:string) {
+		return this.to(util.mkCmd_Open(app,unmin,args))
 	}
 
-	toActivate(app: string, withOpen = false) {
-		return this.to(util.mkCmd_Activate(app, withOpen))
+	toActivate(app:string,withOpen=false) {
+		return this.to(util.mkCmd_Activate(app,withOpen))
 	}
 
-	toUrl(url: string, opt?: boolean | string) {
-		return this.to(util.mkCmd_OpenUrl(url, opt))
+	toUrl(url:string,opt?:boolean|string) {
+		return this.to(util.mkCmd_OpenUrl(url,opt))
 	}
 }
 
@@ -972,8 +976,8 @@ export class SimpleKeyMap{
 		return this
 	}
 
-	toOpen(app: string, unmin = false): SimpleKeyMap {
-		return this.to(util.mkCmd_Open(app, unmin))
+	toOpen(app:string,unmin=false,args?:string):SimpleKeyMap {
+		return this.to(util.mkCmd_Open(app,unmin,args))
 	}
 
 	toActivate(app: string, withOpen = false): SimpleKeyMap {

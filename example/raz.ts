@@ -37,7 +37,7 @@ function setHomeRowMods(src:IConfigDevice, toF18?:k) {
 
 	// delayedActionMs:
 	let hr = src.rule('Home Rows')
-	hr.setOnHold({ delayedActionMs:120, thresholdMs:170 })
+	hr.setOnHold({ thresholdMs:170 })
 	hr.map(k.caps_lock,mdAny).to(k.escape).onHold(k.f16)
 	hr.map(k.a,mdAny).onHold(k.lshift)
 	hr.map(k.s,mdAny).onHold(k.lctrl)
@@ -58,11 +58,10 @@ function setSpecial(src:IConfigDevice) {
 //------------------------------------------------------------------------
 // hyper f / j, original use zmk to map kp or hold
 //------------------------------------------------------------------------
-function setHyperFJ( src:IConfigDevice, trgK:k, aloneK:k, desc, isAppleKB = true) {
+function setHyperFJ( src:IConfigDevice, trgK:k, aloneK:k, desc:string, isAppleKB = true) {
 
 	// use zmk to setup f18 key
 	const f18 = src.ruleBaseBy(trgK).desc(desc).ifAlone(aloneK, 130, isAppleKB)
-
 
 	// movement
 	f18.map(k.k,mdAny).to(k.up_arrow).desc('Up')
@@ -95,24 +94,27 @@ function setHyperFJ( src:IConfigDevice, trgK:k, aloneK:k, desc, isAppleKB = true
 //------------------------------------------------------------------------
 // hyper key
 //------------------------------------------------------------------------
-function setHyperLv( src:IConfigDevice, trgK:k, desc ){
+function setHyperLv( src:IConfigDevice, trgK:k, desc:string ){
 	const bse = src.ruleBaseBy(trgK) .desc(desc)
 		.ifAlone(k.escape)
 
 	bse.map(k.f).toActivate('Finder', true).desc('Finder')
 	bse.map(k.t).toOpen('Ghostty', true)
-	bse.map(k.b).toOpen('Firefox').desc('Firefox')
-	bse.map(k.c).toActivate('CocosCreator').desc('cocos')
+	//bse.map(k.b).toOpen('Firefox').desc('Firefox')
+	bse.map(k.b).toOpen('Firefox',false,'--start-debugger-server=6000')
+
+	bse.map(k.c).toActivate('creator', true).desc('Creator')
 	bse.map(k.s).toOpen('Spine').desc('Spine')
 	bse.map(k.l).toOpen('Line').desc('Line')
+	bse.map(k.k).toOpen('Krita').desc('krita')
+	bse.map(k.p).toOpen('Adobe Photoshop 2023').desc('ps')
+	bse.map(k.v).toOpen('Vply').desc('vply')
 
 	// App Open
 	const lo = bse.layer(k.o).desc('Open App')
 	lo.map(k.s).toOpen('spotify')
 	lo.map(k.m).toOpen('Obsidian')
-	lo.map(k.p).toOpen('Elmedia Player')
 	lo.map(k.j).to(`open '/Volumes/dyn/jd2/JDownloader.jar'`)
-	lo.map(k.k).toOpen('Krita')
 	lo.map(k.t).toOpen('TexturePacker')
 
 
